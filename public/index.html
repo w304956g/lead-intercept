@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lead Intercept — Key Buick GMC</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0A0A0A;--surface:#111;--surface2:#191919;--surface3:#222;
+    --border:#2A2A2A;--border2:#333;
+    --gold:#C8A84B;--gold2:#E8C96B;--gold-dim:#7A6530;
+    --text:#F0EDE6;--muted:#888;--dim:#555;
+    --green:#4CAF7D;--red:#E05555;--blue:#4A9ECC;
+    --font-head:'Syne',sans-serif;--font-mono:'DM Mono',monospace;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh;overflow-x:hidden}
+
+  /* Layout */
+  .shell{display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;min-height:100vh}
+  .topbar{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;position:sticky;top:0;z-index:100}
+  .logo{font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--gold);text-transform:uppercase}
+  .logo span{color:var(--muted);font-weight:400}
+  .topbar-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px}
+  .nav-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;color:var(--dim);padding:16px 20px 6px;text-transform:uppercase}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);transition:all .15s;border-left:2px solid transparent;letter-spacing:.04em}
+  .nav-item:hover{color:var(--text);background:var(--surface2)}
+  .nav-item.active{color:var(--gold);background:rgba(200,168,75,.07);border-left-color:var(--gold)}
+  .nav-icon{font-size:14px;width:18px;text-align:center}
+  .nav-badge{margin-left:auto;background:var(--gold);color:#000;font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px;font-family:var(--font-mono)}
+
+  .main{padding:28px;overflow-y:auto;display:flex;flex-direction:column;gap:24px}
+
+  /* Panels */
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .panel-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--surface2)}
+  .panel-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text)}
+  .panel-sub{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-left:auto}
+  .panel-body{padding:18px}
+
+  /* Stats row */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+  .stat-val{font-size:28px;font-weight:800;color:var(--text);line-height:1}
+  .stat-val.gold{color:var(--gold)}
+  .stat-val.green{color:var(--green)}
+  .stat-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:6px}
+
+  /* Lead simulator */
+  .sim-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .field-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:5px;letter-spacing:.06em}
+  .field-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:9px 12px;font-family:var(--font-mono);font-size:12px;color:var(--text);outline:none;transition:border-color .15s}
+  .field-input:focus{border-color:var(--gold-dim)}
+  select.field-input option{background:var(--surface2)}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:5px;font-family:var(--font-head);font-size:12px;font-weight:700;letter-spacing:.06em;cursor:pointer;border:none;transition:all .15s;text-transform:uppercase}
+  .btn-gold{background:var(--gold);color:#000}
+  .btn-gold:hover{background:var(--gold2)}
+  .btn-outline{background:transparent;border:1px solid var(--border2);color:var(--muted)}
+  .btn-outline:hover{border-color:var(--gold-dim);color:var(--text)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  /* Conversation thread */
+  .thread{display:flex;flex-direction:column;gap:10px;max-height:380px;overflow-y:auto;padding-right:4px}
+  .thread::-webkit-scrollbar{width:3px}
+  .thread::-webkit-scrollbar-track{background:transparent}
+  .thread::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+  .msg{display:flex;flex-direction:column;gap:3px;max-width:78%}
+  .msg.ai{align-self:flex-start}
+  .msg.customer{align-self:flex-end}
+  .msg-label{font-family:var(--font-mono);font-size:9px;color:var(--dim);padding:0 4px}
+  .msg.customer .msg-label{text-align:right}
+  .bubble{padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.55}
+  .msg.ai .bubble{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:2px 8px 8px 8px}
+  .msg.customer .bubble{background:rgba(200,168,75,.15);border:1px solid rgba(200,168,75,.25);color:var(--text);border-radius:8px 2px 8px 8px}
+  .typing{display:flex;gap:4px;align-items:center;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:2px 8px 8px 8px;width:56px}
+  .typing span{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}
+  .typing span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+  /* Lead queue */
+  .lead-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;transition:background .12s;cursor:pointer}
+  .lead-row:hover{background:var(--surface2)}
+  .lead-row:last-child{border-bottom:none}
+  .lead-source{font-family:var(--font-mono);font-size:9px;padding:2px 7px;border-radius:3px;font-weight:500;letter-spacing:.04em}
+  .source-cars{background:rgba(74,158,204,.15);color:var(--blue);border:1px solid rgba(74,158,204,.25)}
+  .source-at{background:rgba(200,168,75,.1);color:var(--gold);border:1px solid rgba(200,168,75,.2)}
+  .source-site{background:rgba(76,175,125,.1);color:var(--green);border:1px solid rgba(76,175,125,.2)}
+  .lead-name{font-weight:600;color:var(--text)}
+  .lead-vehicle{color:var(--muted);font-size:11px}
+  .lead-status{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:9px}
+  .dot{width:6px;height:6px;border-radius:50%}
+  .dot.active{background:var(--green)}
+  .dot.waiting{background:var(--gold);animation:pulse 1.5s infinite}
+  .dot.done{background:var(--dim)}
+  .lead-time{font-family:var(--font-mono);font-size:9px;color:var(--dim)}
+
+  /* Filter rule config */
+  .rule-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .rule-row:last-child{border-bottom:none}
+  .toggle{position:relative;width:34px;height:18px;cursor:pointer}
+  .toggle input{opacity:0;width:0;height:0}
+  .toggle-track{position:absolute;inset:0;background:var(--surface3);border-radius:9px;transition:.2s}
+  .toggle input:checked + .toggle-track{background:var(--gold)}
+  .toggle-thumb{position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:#fff;transition:.2s}
+  .toggle input:checked ~ .toggle-thumb{left:19px}
+  .rule-name{font-size:12px;font-weight:600;flex:1}
+  .rule-action{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+
+  /* Status tag */
+  .tag{font-family:var(--font-mono);font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:.04em}
+  .tag-intercept{background:rgba(200,168,75,.1);color:var(--gold);border:1px solid rgba(200,168,75,.2)}
+  .tag-pass{background:var(--surface3);color:var(--dim);border:1px solid var(--border)}
+  .tag-crm{background:rgba(76,175,125,.1);color:var(--green);border:1px solid rgba(76,175,125,.2)}
+
+  /* Prompt step indicator */
+  .step-track{display:flex;gap:6px;margin-bottom:14px}
+  .step-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);transition:.2s}
+  .step-dot.done{background:var(--green)}
+  .step-dot.active{background:var(--gold)}
+
+  /* Handoff banner */
+  .handoff{display:none;align-items:center;gap:14px;padding:14px 18px;background:rgba(76,175,125,.08);border:1px solid rgba(76,175,125,.2);border-radius:8px;margin-top:12px}
+  .handoff.show{display:flex}
+  .handoff-icon{font-size:22px}
+  .handoff-text{font-size:12px;line-height:1.5}
+  .handoff-text strong{color:var(--green);display:block;font-size:13px;margin-bottom:2px}
+
+  /* Tab bar */
+  .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface2)}
+  .tab{padding:10px 18px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:.15s}
+  .tab:hover{color:var(--muted)}
+  .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+  .tab-pane{display:none;padding:18px}
+  .tab-pane.active{display:block}
+
+  /* Loading shimmer */
+  .shimmer{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:4px;height:12px}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="topbar">
+    <div class="logo">Lead Intercept <span>// Key Buick GMC</span></div>
+    <div class="topbar-status">
+      <div class="pulse"></div>
+      System active &nbsp;·&nbsp; <span id="live-time"></span>
+    </div>
+  </div>
+
+  <nav class="sidebar">
+    <div class="nav-label">Monitor</div>
+    <div class="nav-item active" onclick="showTab('dashboard')"><span class="nav-icon">◈</span> Dashboard</div>
+    <div class="nav-item" onclick="showTab('queue')"><span class="nav-icon">⊞</span> Lead Queue <span class="nav-badge" id="queue-badge">3</span></div>
+    <div class="nav-label">Configure</div>
+    <div class="nav-item" onclick="showTab('rules')"><span class="nav-icon">⊗</span> Filter Rules</div>
+    <div class="nav-item" onclick="showTab('prompt')"><span class="nav-icon">◎</span> AI Prompt</div>
+    <div class="nav-label">Test</div>
+    <div class="nav-item" onclick="showTab('sim')"><span class="nav-icon">▷</span> Simulator</div>
+  </nav>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard">
+      <div class="stats">
+        <div class="stat"><div class="stat-val gold" id="stat-intercepted">0</div><div class="stat-label">Leads intercepted today</div></div>
+        <div class="stat"><div class="stat-val green" id="stat-contacted">0</div><div class="stat-label">Two-way contact</div></div>
+        <div class="stat"><div class="stat-val" id="stat-crm">0</div><div class="stat-label">Pushed to Tekion</div></div>
+        <div class="stat"><div class="stat-val" id="stat-resp">—</div><div class="stat-label">Avg response time</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Recent activity</span>
+          <span class="panel-sub" id="activity-time">live</span>
+        </div>
+        <div id="activity-feed">
+          <div class="lead-row">
+            <span class="lead-source source-cars">Cars.com</span>
+            <div><div class="lead-name">Marcus T.</div><div class="lead-vehicle">2024 GMC Sierra 1500</div></div>
+            <div class="lead-status"><div class="dot done"></div>Pushed to CRM</div>
+            <div class="lead-time">12m ago</div>
+          </div>
+          <div class="lead-row">
+            <span class="lead-source source-at">AutoTrader</span>
+            <div><div class="lead-name">Jennifer R.</div><div class="lead-vehicle">2025 Buick Enclave</div></div>
+            <div class="lead-status"><div class="dot active"></div>In conversation</div>
+            <div class="lead-time">4m ago</div>
+          </div>
+          <div class="lead-row">
+            <span class="lead-source source-site">Dealer site</span>
+            <div><div class="lead-name">David K.</div><div class="lead-vehicle">2024 Hyundai Tucson</div></div>
+            <div class="lead-status"><div class="dot waiting"></div>Waiting reply</div>
+            <div class="lead-time">1m ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUEUE -->
+    <div id="tab-queue" style="display:none">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Lead queue</span><span class="panel-sub">3 active</span></div>
+        <div id="queue-list">
+          <div class="lead-row">
+            <span class="lead-source source-cars">Cars.com</span>
+            <div><div class="lead-name">Jennifer R.</div><div class="lead-vehicle">2025 Buick Enclave — interested in lease options</div></div>
+            <div class="lead-status"><div class="dot active"></div><span style="color:var(--green)">2-way contact</span></div>
+            <div class="lead-time">4m</div>
+          </div>
+          <div class="lead-row">
+            <span class="lead-source source-site">Dealer site</span>
+            <div><div class="lead-name">David K.</div><div class="lead-vehicle">2024 Hyundai Tucson — trade-in inquiry</div></div>
+            <div class="lead-status"><div class="dot waiting"></div><span style="color:var(--gold)">Awaiting reply</span></div>
+            <div class="lead-time">1m</div>
+          </div>
+          <div class="lead-row">
+            <span class="lead-source source-at">AutoTrader</span>
+            <div><div class="lead-name">Priya S.</div><div class="lead-vehicle">2025 GMC Terrain — cash buyer</div></div>
+            <div class="lead-status"><div class="dot waiting"></div><span style="color:var(--gold)">First msg sent</span></div>
+            <div class="lead-time">0m</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTER RULES -->
+    <div id="tab-rules" style="display:none">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Lead source filter rules</span><span class="panel-sub">Intercept = AI engages first</span></div>
+        <div id="rules-list">
+          <!-- populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- AI PROMPT CONFIG -->
+    <div id="tab-prompt" style="display:none">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">AI system prompt</span><span class="panel-sub">Sent with every lead conversation</span></div>
+        <div class="panel-body">
+          <div class="field-label">System prompt (editable)</div>
+          <textarea class="field-input" id="system-prompt" rows="10" style="resize:vertical;line-height:1.55">You are a BDC assistant for Key Buick GMC in Ponte Vedra Beach, FL. Your job is to respond to inbound vehicle leads via text message.
+
+Your goals:
+1. Respond within seconds — speed matters most
+2. Confirm the customer's interest in the specific vehicle
+3. Ask one qualifying question (timeline, trade-in, or financing)
+4. Set an appointment or get them to confirm they want more info
+5. Keep messages short, friendly, and conversational — not salesy
+
+Rules:
+- Never send more than 2 messages before the customer replies
+- Always address the customer by first name
+- If they ask for a price, share a ballpark and invite them in
+- If they say they're ready to come in, immediately alert the sales team
+
+Dealership hours: Mon–Sat 9am–7pm, Sun 12pm–5pm
+Address: [Key Buick GMC address]</textarea>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn btn-gold" onclick="savePrompt()">Save prompt</button>
+            <button class="btn btn-outline" onclick="resetPrompt()">Reset to default</button>
+          </div>
+          <div id="prompt-saved" style="display:none;margin-top:10px;font-family:var(--font-mono);font-size:10px;color:var(--green)">✓ Saved</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIMULATOR -->
+    <div id="tab-sim" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Inbound lead</span></div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="sim-grid">
+              <div>
+                <div class="field-label">First name</div>
+                <input class="field-input" id="sim-name" value="Chris" />
+              </div>
+              <div>
+                <div class="field-label">Phone</div>
+                <input class="field-input" id="sim-phone" value="(904) 555-0182" />
+              </div>
+            </div>
+            <div>
+              <div class="field-label">Vehicle of interest</div>
+              <input class="field-input" id="sim-vehicle" value="2025 GMC Sierra 1500 Denali" />
+            </div>
+            <div>
+              <div class="field-label">Lead source</div>
+              <select class="field-input" id="sim-source">
+                <option value="Cars.com">Cars.com</option>
+                <option value="AutoTrader">AutoTrader</option>
+                <option value="Dealer site">Dealer site</option>
+                <option value="Phone" disabled>Phone (pass-through)</option>
+              </select>
+            </div>
+            <div>
+              <div class="field-label">Customer message (optional)</div>
+              <input class="field-input" id="sim-message" placeholder="e.g. interested in pricing" value="Interested in this truck, what's the best price?" />
+            </div>
+            <button class="btn btn-gold" id="fire-btn" onclick="fireLead()" style="width:100%;justify-content:center">
+              ▷ &nbsp;Fire inbound lead
+            </button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Conversation</span><span class="panel-sub" id="conv-status">—</span></div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="step-track" id="step-track">
+              <div class="step-dot" id="step-0"></div>
+              <div class="step-dot" id="step-1"></div>
+              <div class="step-dot" id="step-2"></div>
+              <div class="step-dot" id="step-3"></div>
+            </div>
+            <div class="thread" id="thread">
+              <div style="text-align:center;color:var(--dim);font-family:var(--font-mono);font-size:10px;padding:30px 0">Fire a lead to start the conversation</div>
+            </div>
+            <div id="reply-area" style="display:none;display:flex;gap:8px;margin-top:4px">
+              <input class="field-input" id="reply-input" placeholder="Reply as customer..." style="flex:1" onkeydown="if(event.key==='Enter')sendReply()" />
+              <button class="btn btn-gold" onclick="sendReply()">Send</button>
+            </div>
+            <div class="handoff" id="handoff-banner">
+              <div class="handoff-icon">✓</div>
+              <div class="handoff-text">
+                <strong>Two-way contact confirmed — handoff triggered</strong>
+                Lead + full transcript queued for Tekion APC push. Salesman notification sent.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────
+const SYSTEM_PROMPT_DEFAULT = document.getElementById('system-prompt').value;
+let conversationHistory = [];
+let handoffDone = false;
+let statsToday = { intercepted: 0, contacted: 0, crm: 0, respMs: [] };
+
+const RULES = [
+  { name: 'Cars.com', action: 'intercept', on: true, cls: 'source-cars' },
+  { name: 'AutoTrader', action: 'intercept', on: true, cls: 'source-at' },
+  { name: 'Dealer website', action: 'intercept', on: true, cls: 'source-site' },
+  { name: 'Edmunds', action: 'intercept', on: false, cls: 'source-at' },
+  { name: 'Phone / walk-in', action: 'pass-through', on: false, cls: 'tag-pass' },
+  { name: 'CarGurus', action: 'intercept', on: true, cls: 'source-cars' },
+];
+
+// ── Nav ────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll('[id^="tab-"]').forEach(p => p.style.display = 'none');
+  document.getElementById('tab-' + id).style.display = 'block';
+  if (id === 'rules') renderRules();
+}
+
+// ── Rules ──────────────────────────────────────────────
+function renderRules() {
+  const list = document.getElementById('rules-list');
+  list.innerHTML = RULES.map((r, i) => `
+    <div class="rule-row">
+      <label class="toggle">
+        <input type="checkbox" ${r.on ? 'checked' : ''} onchange="toggleRule(${i}, this.checked)">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+      <div class="rule-name">${r.name}</div>
+      <div class="rule-action">${r.action}</div>
+      <span class="tag ${r.action === 'intercept' ? 'tag-intercept' : 'tag-pass'}">${r.action}</span>
+    </div>`).join('');
+}
+function toggleRule(i, v) { RULES[i].on = v; }
+
+// ── Prompt ─────────────────────────────────────────────
+function savePrompt() {
+  document.getElementById('prompt-saved').style.display = 'block';
+  setTimeout(() => document.getElementById('prompt-saved').style.display = 'none', 2000);
+}
+function resetPrompt() {
+  document.getElementById('system-prompt').value = SYSTEM_PROMPT_DEFAULT;
+}
+
+// ── Simulator ──────────────────────────────────────────
+function setStep(n) {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('step-' + i);
+    d.className = 'step-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+}
+
+function appendMsg(role, text) {
+  const thread = document.getElementById('thread');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'ai' ? 'ai' : 'customer');
+  div.innerHTML = `<div class="msg-label">${role === 'ai' ? 'AI Agent' : 'Customer'}</div><div class="bubble">${text}</div>`;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function showTyping() {
+  const thread = document.getElementById('thread');
+  const div = document.createElement('div');
+  div.id = 'typing-indicator';
+  div.className = 'msg ai';
+  div.innerHTML = `<div class="msg-label">AI Agent</div><div class="typing"><span></span><span></span><span></span></div>`;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+async function callClaude(messages) {
+  const sysPrompt = document.getElementById('system-prompt').value;
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: sysPrompt,
+      messages: messages
+    })
+  });
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content?.[0]?.text || '[No response]';
+}
+
+async function fireLead() {
+  const name = document.getElementById('sim-name').value.trim() || 'Customer';
+  const vehicle = document.getElementById('sim-vehicle').value.trim();
+  const source = document.getElementById('sim-source').value;
+  const message = document.getElementById('sim-message').value.trim();
+
+  // Reset
+  document.getElementById('thread').innerHTML = '';
+  document.getElementById('handoff-banner').classList.remove('show');
+  document.getElementById('reply-area').style.display = 'none';
+  handoffDone = false;
+  conversationHistory = [];
+  setStep(0);
+  document.getElementById('conv-status').textContent = 'intercepting...';
+  document.getElementById('fire-btn').disabled = true;
+
+  // Show incoming lead
+  const leadInfo = `📥 Lead received from ${source}\n${name} · ${vehicle}${message ? '\n"' + message + '"' : ''}`;
+  appendMsg('system-note', `<span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">${leadInfo.replace(/\n/g, '<br>')}</span>`);
+
+  setStep(1);
+  statsToday.intercepted++;
+  updateStats();
+
+  // Build first user message for Claude
+  const userMsg = `New inbound lead:
+Customer name: ${name}
+Vehicle of interest: ${vehicle}
+Lead source: ${source}
+Customer message: "${message || 'No message provided'}"
+
+Send your first SMS response to this customer.`;
+
+  conversationHistory.push({ role: 'user', content: userMsg });
+
+  showTyping();
+  document.getElementById('conv-status').textContent = 'AI responding...';
+
+  const start = Date.now();
+  try {
+    const aiReply = await callClaude(conversationHistory);
+    removeTyping();
+    conversationHistory.push({ role: 'assistant', content: aiReply });
+    statsToday.respMs.push(Date.now() - start);
+    appendMsg('ai', aiReply);
+    setStep(2);
+    document.getElementById('conv-status').textContent = 'waiting for customer reply...';
+    document.getElementById('reply-area').style.display = 'flex';
+    document.getElementById('reply-input').focus();
+    updateStats();
+  } catch(e) {
+    removeTyping();
+    appendMsg('ai', '[API error — check console]');
+  }
+  document.getElementById('fire-btn').disabled = false;
+}
+
+async function sendReply() {
+  if (handoffDone) return;
+  const input = document.getElementById('reply-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  appendMsg('customer', text);
+  conversationHistory.push({ role: 'user', content: text });
+  setStep(3);
+
+  // Check if this is 2-way contact (first customer reply = contact made)
+  const customerReplies = conversationHistory.filter(m => m.role === 'user' && !m.content.startsWith('New inbound lead'));
+  if (customerReplies.length === 1) {
+    statsToday.contacted++;
+    updateStats();
+  }
+
+  showTyping();
+  document.getElementById('conv-status').textContent = 'AI responding...';
+
+  try {
+    const aiReply = await callClaude(conversationHistory);
+    removeTyping();
+    conversationHistory.push({ role: 'assistant', content: aiReply });
+    appendMsg('ai', aiReply);
+
+    // After first customer reply, trigger handoff
+    if (customerReplies.length === 1 && !handoffDone) {
+      handoffDone = true;
+      setTimeout(() => {
+        document.getElementById('handoff-banner').classList.add('show');
+        document.getElementById('conv-status').textContent = '✓ handed off to Tekion';
+        statsToday.crm++;
+        updateStats();
+        addActivityEntry();
+      }, 800);
+    }
+  } catch(e) {
+    removeTyping();
+    appendMsg('ai', '[API error]');
+  }
+}
+
+function addActivityEntry() {
+  const name = document.getElementById('sim-name').value.trim() || 'Customer';
+  const vehicle = document.getElementById('sim-vehicle').value.trim();
+  const source = document.getElementById('sim-source').value;
+  const cls = source === 'Cars.com' ? 'source-cars' : source === 'AutoTrader' ? 'source-at' : 'source-site';
+  const feed = document.getElementById('activity-feed');
+  const row = document.createElement('div');
+  row.className = 'lead-row';
+  row.innerHTML = `<span class="lead-source ${cls}">${source}</span>
+    <div><div class="lead-name">${name}</div><div class="lead-vehicle">${vehicle}</div></div>
+    <div class="lead-status"><div class="dot done"></div>Pushed to CRM</div>
+    <div class="lead-time">just now</div>`;
+  feed.insertBefore(row, feed.firstChild);
+  document.getElementById('queue-badge').textContent = parseInt(document.getElementById('queue-badge').textContent) + 1;
+}
+
+// ── Stats ──────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('stat-intercepted').textContent = statsToday.intercepted;
+  document.getElementById('stat-contacted').textContent = statsToday.contacted;
+  document.getElementById('stat-crm').textContent = statsToday.crm;
+  if (statsToday.respMs.length) {
+    const avg = statsToday.respMs.reduce((a, b) => a + b, 0) / statsToday.respMs.length;
+    document.getElementById('stat-resp').textContent = (avg / 1000).toFixed(1) + 's';
+  }
+}
+
+// ── Clock ──────────────────────────────────────────────
+function tick() {
+  const now = new Date();
+  document.getElementById('live-time').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+tick(); setInterval(tick, 1000);
+
+// ── Override msg style for system notes ───────────────
+const style = document.createElement('style');
+style.textContent = `.msg.system-note{align-self:stretch;max-width:100%}.msg.system-note .bubble{background:rgba(200,168,75,.05);border:1px solid rgba(200,168,75,.12);border-radius:5px;color:var(--muted)}`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
