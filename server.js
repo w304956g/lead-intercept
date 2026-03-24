@@ -4,7 +4,47 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
+
+// ── Auth middleware ───────────────────────────────────
+const APP_PASSWORD = process.env.APP_PASSWORD || 'changeme';
+
+// Allow login page assets and login/logout routes without auth
+function requireAuth(req, res, next) {
+  const open = ['/login', '/logout', '/login.html'];
+  if (open.includes(req.path)) return next();
+  // Allow webhook without password (it comes from Cars.com/AutoTrader servers)
+  if (req.path.startsWith('/webhook/')) return next();
+  // Check session cookie
+  const cookie = req.headers.cookie || '';
+  const authed = cookie.split(';').some(c => c.trim() === 'auth=1');
+  if (authed) return next();
+  // API calls get 401 instead of redirect
+  if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized' });
+  res.redirect('/login');
+}
+
+app.use(requireAuth);
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.post('/login', (req, res) => {
+  const { password } = req.body;
+  if (password === APP_PASSWORD) {
+    // Set a simple session cookie (30 day expiry)
+    res.setHeader('Set-Cookie', 'auth=1; Path=/; Max-Age=2592000; HttpOnly; SameSite=Strict');
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ error: 'Wrong password' });
+  }
+});
+
+app.post('/logout', (req, res) => {
+  res.setHeader('Set-Cookie', 'auth=; Path=/; Max-Age=0');
+  res.json({ ok: true });
+});
 
 // ── Database ──────────────────────────────────────────
 const pool = new Pool({

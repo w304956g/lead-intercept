@@ -166,6 +166,7 @@
         📋 Webhook: <span id="webhook-display"></span>
       </div>
       <div class="topbar-status"><div class="pulse"></div><span id="live-time"></span></div>
+      <button onclick="logout()" style="background:none;border:1px solid var(--border2);color:var(--dim);font-family:var(--font-mono);font-size:9px;padding:4px 10px;border-radius:4px;cursor:pointer;letter-spacing:.06em" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--dim)'">SIGN OUT</button>
     </div>
   </div>
 
@@ -638,6 +639,12 @@ function tick() {
 }
 tick(); setInterval(tick, 1000);
 document.getElementById('webhook-display').textContent = window.location.host + '/webhook/lead';
+
+// ── Auth ──────────────────────────────────────────────
+async function logout() {
+  await fetch('/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
 
 // Load dashboard on init
 loadDashboard();
