@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prelude AI — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0B09;--surface:#131310;--s2:#1A1A16;--s3:#222;
+  --border:#2A2A24;--border2:#363630;
+  --gold:#C8A84B;--gold2:#E8C96B;--gold-dim:#5A4A20;
+  --text:#F0EDE4;--muted:#888880;--dim:#444440;
+  --green:#4CAF7D;--red:#E05555;--blue:#4A9ECC;--orange:#E8923A;
+  --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--fh);min-height:100vh;overflow-x:hidden}
+.shell{display:grid;grid-template-columns:220px 1fr;grid-template-rows:50px 1fr;min-height:100vh}
+.topbar{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:14px;position:sticky;top:0;z-index:100}
+.logo{font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--gold);text-transform:uppercase}
+.logo span{color:var(--muted);font-weight:400}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.topbar-status{display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:10px;color:var(--muted)}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.webhook-chip{font-family:var(--fm);font-size:9px;background:var(--s2);border:1px solid var(--border);padding:3px 9px;border-radius:4px;color:var(--muted);cursor:pointer;transition:.15s}
+.webhook-chip:hover{border-color:var(--gold-dim);color:var(--text)}
+.user-chip{font-family:var(--fm);font-size:9px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.user-chip .role{color:var(--gold)}
+.btn-signout{background:none;border:1px solid var(--border2);color:var(--dim);font-family:var(--fm);font-size:9px;padding:3px 9px;border-radius:4px;cursor:pointer;letter-spacing:.06em;transition:.15s}
+.btn-signout:hover{color:var(--text);border-color:var(--border2)}
+
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:14px 0;display:flex;flex-direction:column;overflow-y:auto}
+.nav-label{font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--dim);padding:12px 16px 4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);transition:all .15s;border-left:2px solid transparent;letter-spacing:.04em}
+.nav-item:hover{color:var(--text);background:var(--s2)}
+.nav-item.active{color:var(--gold);background:rgba(200,168,75,.07);border-left-color:var(--gold)}
+.nav-badge{margin-left:auto;background:var(--gold);color:#000;font-size:8px;font-weight:700;padding:1px 5px;border-radius:20px;font-family:var(--fm)}
+
+.main{padding:22px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+.tab-content{display:flex;flex-direction:column;gap:18px}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.ph{display:flex;align-items:center;gap:8px;padding:11px 15px;border-bottom:1px solid var(--border);background:var(--s2)}
+.pt{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.ps{font-family:var(--fm);font-size:10px;color:var(--muted);margin-left:auto}
+.pb{padding:15px}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px 15px}
+.stat-val{font-size:24px;font-weight:800;line-height:1}
+.stat-val.gold{color:var(--gold)}.stat-val.green{color:var(--green)}.stat-val.blue{color:var(--blue)}
+.stat-label{font-family:var(--fm);font-size:9px;color:var(--muted);margin-top:4px}
+
+.fl{font-family:var(--fm);font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:.06em;text-transform:uppercase}
+.fi{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font-family:var(--fm);font-size:11px;color:var(--text);outline:none;transition:border-color .15s}
+.fi:focus{border-color:var(--gold-dim)}
+select.fi option{background:var(--s2)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:5px;font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.06em;cursor:pointer;border:none;transition:all .15s;text-transform:uppercase}
+.btn-gold{background:var(--gold);color:#000}.btn-gold:hover{background:var(--gold2)}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--muted)}.btn-outline:hover{border-color:var(--gold-dim);color:var(--text)}
+.btn-green{background:rgba(76,175,125,.12);border:1px solid rgba(76,175,125,.3);color:var(--green)}.btn-green:hover{background:rgba(76,175,125,.22)}
+.btn-red{background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.25);color:var(--red)}.btn-red:hover{background:rgba(224,85,85,.2)}
+.btn-sm{padding:4px 10px;font-size:9px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.lead-row{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid var(--border);font-size:11px;cursor:pointer;transition:background .12s}
+.lead-row:hover{background:var(--s2)}.lead-row:last-child{border-bottom:none}
+.src-tag{font-family:var(--fm);font-size:8px;padding:2px 5px;border-radius:3px;font-weight:500;white-space:nowrap}
+.src-cars{background:rgba(74,158,204,.15);color:var(--blue);border:1px solid rgba(74,158,204,.25)}
+.src-at{background:rgba(200,168,75,.1);color:var(--gold);border:1px solid rgba(200,168,75,.2)}
+.src-site{background:rgba(76,175,125,.1);color:var(--green);border:1px solid rgba(76,175,125,.2)}
+.src-default{background:var(--s3);color:var(--muted);border:1px solid var(--border)}
+.test-tag{font-family:var(--fm);font-size:8px;padding:2px 5px;border-radius:3px;background:rgba(232,146,58,.1);color:var(--orange);border:1px solid rgba(232,146,58,.2)}
+.lname{font-weight:700;color:var(--text)}.lveh{color:var(--muted);font-size:10px;margin-top:1px}
+.lstat{margin-left:auto;display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:9px;white-space:nowrap}
+.dot{width:5px;height:5px;border-radius:50%}
+.dg{background:var(--green)}.dau{background:var(--gold);animation:pulse 1.5s infinite}.dd{background:var(--dim)}.db{background:var(--blue)}
+.ltime{font-family:var(--fm);font-size:9px;color:var(--dim);white-space:nowrap}
+.del-btn{background:none;border:none;color:var(--dim);cursor:pointer;padding:3px 6px;border-radius:3px;font-size:12px;transition:.15s;flex-shrink:0}
+.del-btn:hover{color:var(--red);background:rgba(224,85,85,.1)}
+
+.badge{font-family:var(--fm);font-size:8px;padding:2px 6px;border-radius:3px;letter-spacing:.04em}
+.b-int{background:rgba(74,158,204,.1);color:var(--blue);border:1px solid rgba(74,158,204,.2)}
+.b-eng{background:rgba(200,168,75,.1);color:var(--gold);border:1px solid rgba(200,168,75,.2)}
+.b-con{background:rgba(76,175,125,.1);color:var(--green);border:1px solid rgba(76,175,125,.2)}
+.b-crm{background:rgba(76,175,125,.2);color:var(--green);border:1px solid rgba(76,175,125,.4)}
+.b-pas{background:var(--s3);color:var(--dim);border:1px solid var(--border)}
+.b-err{background:rgba(224,85,85,.1);color:var(--red);border:1px solid rgba(224,85,85,.2)}
+
+.toggle-w{position:relative;width:30px;height:16px;cursor:pointer;flex-shrink:0}
+.toggle-w input{opacity:0;width:0;height:0;position:absolute}
+.toggle-t{position:absolute;inset:0;background:var(--s3);border-radius:8px;transition:.2s;border:1px solid var(--border)}
+.toggle-w input:checked+.toggle-t{background:var(--gold);border-color:var(--gold)}
+.toggle-th{position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:.2s;pointer-events:none}
+.toggle-w input:checked~.toggle-th{left:16px}
+
+.thread{display:flex;flex-direction:column;gap:7px;max-height:320px;overflow-y:auto;padding-right:3px}
+.thread::-webkit-scrollbar{width:3px}.thread::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.msg{display:flex;flex-direction:column;gap:2px;max-width:80%}
+.msg.ai{align-self:flex-start}.msg.customer{align-self:flex-end}.msg.note{align-self:stretch;max-width:100%}
+.msg-lbl{font-family:var(--fm);font-size:8px;color:var(--dim);padding:0 3px}
+.msg.customer .msg-lbl{text-align:right}
+.bubble{padding:8px 12px;border-radius:8px;font-size:11px;line-height:1.55}
+.msg.ai .bubble{background:var(--s2);border:1px solid var(--border);border-radius:2px 8px 8px 8px}
+.msg.customer .bubble{background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.22);border-radius:8px 2px 8px 8px}
+.msg.note .bubble{background:rgba(200,168,75,.04);border:1px solid rgba(200,168,75,.1);border-radius:5px;color:var(--muted);font-family:var(--fm);font-size:9px}
+.typing{display:flex;gap:4px;align-items:center;padding:8px 12px;background:var(--s2);border:1px solid var(--border);border-radius:2px 8px 8px 8px;width:44px}
+.typing span{width:4px;height:4px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+.step-track{display:flex;gap:4px;margin-bottom:10px}
+.sd{width:5px;height:5px;border-radius:50%;background:var(--border2);transition:.2s}
+.sd.done{background:var(--green)}.sd.active{background:var(--gold)}
+
+.handoff{display:none;align-items:center;gap:10px;padding:11px 14px;background:rgba(76,175,125,.07);border:1px solid rgba(76,175,125,.2);border-radius:6px;margin-top:8px}
+.handoff.show{display:flex}
+.handoff-text strong{color:var(--green);display:block;font-size:11px;margin-bottom:2px}
+.handoff-text{font-size:10px;line-height:1.5}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:min(700px,95vw);max-height:90vh;overflow-y:auto;display:flex;flex-direction:column}
+.mh{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1}
+.mt{font-size:13px;font-weight:700}.mc{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:17px;line-height:1;padding:2px 5px}
+.mc:hover{color:var(--text)}
+.mb{padding:18px;display:flex;flex-direction:column;gap:14px}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ib{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:10px}
+.il{font-family:var(--fm);font-size:8px;color:var(--dim);margin-bottom:3px;text-transform:uppercase}
+.iv{font-size:11px;font-weight:600}
+
+.report-table{width:100%;border-collapse:collapse}
+.report-table th{font-family:var(--fm);font-size:9px;color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--s2);text-transform:uppercase;letter-spacing:.06em}
+.report-table td{font-size:11px;padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+.report-table tr:last-child td{border-bottom:none}
+.report-table tr:hover td{background:var(--s2)}
+.rate-bar{height:4px;background:var(--border);border-radius:2px;margin-top:3px;overflow:hidden}
+.rate-fill{height:100%;background:var(--green);border-radius:2px;transition:.4s}
+.period-btn{font-family:var(--fm);font-size:9px;padding:4px 10px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);transition:.15s}
+.period-btn.active,.period-btn:hover{border-color:var(--gold-dim);color:var(--gold);background:rgba(200,168,75,.07)}
+
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)}
+.user-row:last-child{border-bottom:none}
+.uname{font-size:12px;font-weight:600;flex:1}
+.urole{font-family:var(--fm);font-size:9px;padding:2px 6px;border-radius:3px}
+.urole-admin{background:rgba(200,168,75,.1);color:var(--gold);border:1px solid rgba(200,168,75,.2)}
+.urole-viewer{background:var(--s3);color:var(--muted);border:1px solid var(--border)}
+.ulast{font-family:var(--fm);font-size:9px;color:var(--dim)}
+
+.empty{text-align:center;padding:28px;color:var(--dim);font-family:var(--fm);font-size:10px}
+.rule-row{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--border)}
+.rule-row:last-child{border-bottom:none}
+.rule-name{font-size:11px;font-weight:600;flex:1}
+.rule-action{font-family:var(--fm);font-size:9px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="logo">Prelude <span>AI</span></div>
+    <div class="topbar-right">
+      <div class="webhook-chip" onclick="copyWebhook()" title="Click to copy webhook URL">📋 <span id="wh-display"></span></div>
+      <div class="user-chip"><span id="user-display">—</span> <span class="role" id="role-display"></span></div>
+      <button class="btn-signout" onclick="logout()">SIGN OUT</button>
+      <div class="topbar-status"><div class="pulse"></div><span id="live-time"></span></div>
+    </div>
+  </div>
+
+  <nav class="sidebar">
+    <div class="nav-label">Monitor</div>
+    <div class="nav-item active" data-tab="dashboard">◈ &nbsp;Dashboard</div>
+    <div class="nav-item" data-tab="leads">⊞ &nbsp;All Leads <span class="nav-badge" id="leads-badge">—</span></div>
+    <div class="nav-item" data-tab="reports">▦ &nbsp;Reports</div>
+    <div class="nav-label">Configure</div>
+    <div class="nav-item" data-tab="rules">⊗ &nbsp;Filter Rules</div>
+    <div class="nav-item" data-tab="prompt">◎ &nbsp;AI Prompt</div>
+    <div class="nav-item admin-only" data-tab="users" style="display:none">👤 &nbsp;Users</div>
+    <div class="nav-label">Test</div>
+    <div class="nav-item" data-tab="sim">▷ &nbsp;Simulator</div>
+  </nav>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content">
+      <div class="stats">
+        <div class="stat"><div class="stat-val gold" id="s-int">—</div><div class="stat-label">Intercepted today</div></div>
+        <div class="stat"><div class="stat-val green" id="s-con">—</div><div class="stat-label">Two-way contact</div></div>
+        <div class="stat"><div class="stat-val blue" id="s-crm">—</div><div class="stat-label">Pushed to CRM</div></div>
+        <div class="stat"><div class="stat-val" id="s-pas">—</div><div class="stat-label">Passed through</div></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="pt">Recent leads</span><span class="ps" id="dash-ts">live</span></div>
+        <div id="dash-feed"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- ALL LEADS -->
+    <div id="tab-leads" class="tab-content" style="display:none">
+      <div class="panel">
+        <div class="ph">
+          <span class="pt">All leads</span>
+          <label style="display:flex;align-items:center;gap:6px;font-family:var(--fm);font-size:9px;color:var(--muted);cursor:pointer;margin-left:12px">
+            <input type="checkbox" id="show-test-toggle" onchange="loadLeads()"> Show test leads
+          </label>
+          <span class="ps" id="leads-count">—</span>
+          <button class="btn btn-red btn-sm" style="margin-left:8px" onclick="clearTestLeads()">Clear test leads</button>
+        </div>
+        <div id="leads-list"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div id="tab-reports" class="tab-content" style="display:none">
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-family:var(--fm);font-size:9px;color:var(--muted)">Period:</span>
+        <button class="period-btn active" onclick="setReportPeriod(7,this)">7 days</button>
+        <button class="period-btn" onclick="setReportPeriod(30,this)">30 days</button>
+        <button class="period-btn" onclick="setReportPeriod(90,this)">90 days</button>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="pt">By lead source</span><span class="ps">real leads only</span></div>
+        <div id="report-source"><div class="empty">Loading...</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <div class="panel"><div class="ph"><span class="pt">By status</span></div><div id="report-status"><div class="empty">Loading...</div></div></div>
+        <div class="panel"><div class="ph"><span class="pt">Daily volume</span></div><div id="report-daily"><div class="empty">Loading...</div></div></div>
+      </div>
+    </div>
+
+    <!-- FILTER RULES -->
+    <div id="tab-rules" class="tab-content" style="display:none">
+      <div class="panel">
+        <div class="ph">
+          <span class="pt">Filter rules</span>
+          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="showAddRule()">+ Add rule</button>
+        </div>
+        <div id="rules-list"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- AI PROMPT -->
+    <div id="tab-prompt" class="tab-content" style="display:none">
+      <div class="panel">
+        <div class="ph"><span class="pt">AI system prompt</span><span class="ps" id="prompt-status">loading...</span></div>
+        <div class="pb" style="display:flex;flex-direction:column;gap:10px">
+          <div class="fl">Controls how the AI responds to leads — changes take effect immediately</div>
+          <textarea class="fi" id="system-prompt" rows="16" style="resize:vertical;line-height:1.6">Loading...</textarea>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-gold" onclick="savePrompt()">Save to server</button>
+            <button class="btn btn-outline" onclick="loadPrompt()">Reset from server</button>
+            <span id="prompt-saved" style="display:none;font-family:var(--fm);font-size:10px;color:var(--green)">✓ Saved — active on next lead</span>
+            <span id="prompt-error" style="display:none;font-family:var(--fm);font-size:10px;color:var(--red)">Error saving</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div id="tab-users" class="tab-content" style="display:none">
+      <div class="panel">
+        <div class="ph">
+          <span class="pt">User accounts</span>
+          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="showAddUser()">+ Add user</button>
+        </div>
+        <div id="users-list"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- SIMULATOR -->
+    <div id="tab-sim" class="tab-content" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="panel">
+          <div class="ph"><span class="pt">Inbound lead</span><span class="ps">marked as TEST · no send delay</span></div>
+          <div class="pb" style="display:flex;flex-direction:column;gap:10px">
+            <div class="fg">
+              <div><div class="fl">First name</div><input class="fi" id="sim-name" value="Chris"></div>
+              <div><div class="fl">Phone</div><input class="fi" id="sim-phone" value="(904) 555-0182"></div>
+            </div>
+            <div><div class="fl">Vehicle of interest</div><input class="fi" id="sim-vehicle" value="2025 GMC Sierra 1500 Denali"></div>
+            <div><div class="fl">Lead source</div>
+              <select class="fi" id="sim-source">
+                <option>Cars.com</option><option>AutoTrader</option><option>Dealer site</option><option>CarGurus</option>
+              </select>
+            </div>
+            <div><div class="fl">Customer message</div><input class="fi" id="sim-message" value="Interested in this truck, what's the best price?"></div>
+            <button class="btn btn-gold" id="fire-btn" onclick="fireLead()" style="width:100%">▷ &nbsp;Fire test lead</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="pt">Conversation</span><span class="ps" id="conv-status">—</span></div>
+          <div class="pb" style="display:flex;flex-direction:column;gap:8px">
+            <div class="step-track"><div class="sd" id="sd0"></div><div class="sd" id="sd1"></div><div class="sd" id="sd2"></div><div class="sd" id="sd3"></div></div>
+            <div class="thread" id="sim-thread"><div class="empty">Fire a lead to start</div></div>
+            <div id="reply-area" style="display:none;gap:7px">
+              <input class="fi" id="reply-input" placeholder="Reply as customer..." style="flex:1" onkeydown="if(event.key==='Enter')sendReply()">
+              <button class="btn btn-gold" onclick="sendReply()">Send</button>
+            </div>
+            <div class="handoff" id="handoff-banner">
+              <div class="handoff-text">
+                <strong>✓ Two-way contact — handoff triggered</strong>
+                Transcript saved. Ready to push to CRM.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Lead modal -->
+<div class="modal-bg" id="lead-modal">
+  <div class="modal">
+    <div class="mh">
+      <div class="mt" id="modal-title">Lead</div>
+      <div id="modal-badge" style="margin-left:6px"></div>
+      <div id="modal-test-badge" style="margin-left:4px"></div>
+      <button class="mc" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mb" id="modal-body">Loading...</div>
+  </div>
+</div>
+
+<script>
+let currentLeadId = null;
+let currentUser = null;
+let reportPeriod = 7;
+
+async function init() {
+  const me = await fetch('/api/me').then(r=>r.json());
+  currentUser = me;
+  document.getElementById('user-display').textContent = me.username;
+  document.getElementById('role-display').textContent = me.role;
+  if (me.role === 'admin') {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+  }
+  loadDashboard();
+}
+
+document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(p => p.style.display = 'none');
+    const tab = item.dataset.tab;
+    document.getElementById('tab-'+tab).style.display = 'flex';
+    if (tab==='dashboard') loadDashboard();
+    if (tab==='leads') loadLeads();
+    if (tab==='reports') loadReports();
+    if (tab==='rules') loadRules();
+    if (tab==='users') loadUsers();
+    if (tab==='prompt') loadPrompt();
+  });
+});
+
+function timeAgo(ts) {
+  const d = Math.floor((Date.now()-new Date(ts))/1000);
+  if (d<60) return d+'s ago';
+  if (d<3600) return Math.floor(d/60)+'m ago';
+  if (d<86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+function srcClass(s) {
+  const l=(s||'').toLowerCase();
+  if(l.includes('cars.com')) return 'src-cars';
+  if(l.includes('autotrader')) return 'src-at';
+  if(l.includes('dealer')||l.includes('site')) return 'src-site';
+  return 'src-default';
+}
+function dotClass(s){return{intercepted:'db','ai-engaged':'dau',contacted:'dg','pushed-to-crm':'dg','passed-through':'dd',error:'dd'}[s]||'dd'}
+function statusLabel(s){return{'intercepted':'Intercepted','ai-engaged':'AI engaged','contacted':'2-way contact','pushed-to-crm':'In CRM','passed-through':'Passed','error':'Error'}[s]||s}
+function badgeClass(s){return{'intercepted':'b-int','ai-engaged':'b-eng','contacted':'b-con','pushed-to-crm':'b-crm','passed-through':'b-pas','error':'b-err'}[s]||'b-pas'}
+
+function leadRowHTML(lead, showDelete=false) {
+  const testBadge = lead.is_test ? '<span class="test-tag">TEST</span>' : '';
+  const delBtn = showDelete ? `<button class="del-btn" onclick="deleteLead(event,${lead.id})" title="Delete">🗑</button>` : '';
+  return `<div class="lead-row" onclick="openLead(${lead.id})">
+    <span class="src-tag ${srcClass(lead.source)}">${lead.source||'Unknown'}</span>
+    ${testBadge}
+    <div><div class="lname">${lead.name||'Unknown'}</div><div class="lveh">${lead.vehicle||''}</div></div>
+    <div class="lstat"><div class="dot ${dotClass(lead.status)}"></div>${statusLabel(lead.status)}</div>
+    <div class="ltime">${timeAgo(lead.created_at)}</div>
+    ${delBtn}
+  </div>`;
+}
+
+async function loadDashboard() {
+  const [stats, leads] = await Promise.all([
+    fetch('/api/stats').then(r=>r.json()),
+    fetch('/api/leads').then(r=>r.json())
+  ]);
+  document.getElementById('s-int').textContent = stats.intercepted_today||0;
+  document.getElementById('s-con').textContent = stats.contacted_today||0;
+  document.getElementById('s-crm').textContent = stats.crm_today||0;
+  document.getElementById('s-pas').textContent = stats.passed_today||0;
+  document.getElementById('dash-ts').textContent = 'updated '+new Date().toLocaleTimeString();
+  const feed = document.getElementById('dash-feed');
+  feed.innerHTML = leads.length ? leads.slice(0,10).map(l=>leadRowHTML(l)).join('') : '<div class="empty">No real leads yet — fire a simulator lead to test</div>';
+  document.getElementById('leads-badge').textContent = leads.filter(l=>['intercepted','ai-engaged'].includes(l.status)).length || leads.length;
+}
+
+async function loadLeads() {
+  const showTest = document.getElementById('show-test-toggle')?.checked;
+  const leads = await fetch('/api/leads?show_test='+(showTest?'true':'false')).then(r=>r.json());
+  document.getElementById('leads-count').textContent = leads.length+' leads';
+  document.getElementById('leads-list').innerHTML = leads.length ? leads.map(l=>leadRowHTML(l,true)).join('') : '<div class="empty">No leads yet</div>';
+}
+
+async function deleteLead(e, id) {
+  e.stopPropagation();
+  if (!confirm('Delete this lead permanently?')) return;
+  await fetch('/api/leads/'+id, {method:'DELETE'});
+  loadLeads();
+}
+
+async function clearTestLeads() {
+  if (!confirm('Delete all test leads? This cannot be undone.')) return;
+  const d = await fetch('/api/leads?test_only=true', {method:'DELETE'}).then(r=>r.json());
+  alert(`Deleted ${d.deleted} test lead${d.deleted===1?'':'s'}.`);
+  loadLeads();
+}
+
+function setReportPeriod(days, btn) {
+  reportPeriod = days;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadReports();
+}
+
+async function loadReports() {
+  const data = await fetch('/api/reports?days='+reportPeriod).then(r=>r.json());
+  const srcEl = document.getElementById('report-source');
+  if (!data.by_source.length) {
+    srcEl.innerHTML = '<div class="empty">No data yet — needs real leads</div>';
+  } else {
+    srcEl.innerHTML = `<table class="report-table">
+      <thead><tr><th>Source</th><th>Total</th><th>Responded</th><th>In CRM</th><th>No response</th><th>Contact rate</th></tr></thead>
+      <tbody>${data.by_source.map(r=>`<tr>
+        <td><span class="src-tag ${srcClass(r.source)}">${r.source}</span></td>
+        <td style="font-weight:700">${r.total}</td>
+        <td style="color:var(--green)">${r.contacted}</td>
+        <td style="color:var(--blue)">${r.pushed_to_crm}</td>
+        <td style="color:var(--red)">${r.no_response}</td>
+        <td><div style="font-weight:700;color:${r.contact_rate>=50?'var(--green)':r.contact_rate>=25?'var(--gold)':'var(--red)'}">${r.contact_rate||0}%</div>
+        <div class="rate-bar"><div class="rate-fill" style="width:${r.contact_rate||0}%;background:${r.contact_rate>=50?'var(--green)':r.contact_rate>=25?'var(--gold)':'var(--red)'}"></div></div></td>
+      </tr>`).join('')}</tbody></table>`;
+  }
+  const statEl = document.getElementById('report-status');
+  if (!data.by_status.length) { statEl.innerHTML = '<div class="empty">No data yet</div>'; }
+  else {
+    const total = data.by_status.reduce((a,r)=>a+parseInt(r.count),0);
+    statEl.innerHTML = `<div style="padding:12px;display:flex;flex-direction:column;gap:8px">
+      ${data.by_status.map(r=>`<div style="display:flex;align-items:center;gap:8px">
+        <span class="badge ${badgeClass(r.status)}" style="min-width:90px;text-align:center">${statusLabel(r.status)}</span>
+        <div class="rate-bar" style="flex:1;height:6px"><div class="rate-fill" style="width:${Math.round(r.count/total*100)}%"></div></div>
+        <span style="font-family:var(--fm);font-size:10px;min-width:24px;text-align:right">${r.count}</span>
+      </div>`).join('')}</div>`;
+  }
+  const dailyEl = document.getElementById('report-daily');
+  if (!data.daily.length) { dailyEl.innerHTML = '<div class="empty">No data yet</div>'; }
+  else {
+    dailyEl.innerHTML = `<table class="report-table">
+      <thead><tr><th>Date</th><th>Total</th><th>Contacted</th></tr></thead>
+      <tbody>${data.daily.slice(0,14).map(r=>`<tr>
+        <td style="font-family:var(--fm);font-size:10px">${new Date(r.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+        <td style="font-weight:700">${r.total}</td>
+        <td style="color:var(--green)">${r.contacted}</td>
+      </tr>`).join('')}</tbody></table>`;
+  }
+}
+
+async function loadRules() {
+  const rules = await fetch('/api/rules').then(r=>r.json());
+  document.getElementById('rules-list').innerHTML = rules.map(r=>`
+    <div class="rule-row">
+      <label class="toggle-w">
+        <input type="checkbox" ${r.enabled?'checked':''} onchange="toggleRule(${r.id},this.checked)">
+        <div class="toggle-t"></div><div class="toggle-th"></div>
+      </label>
+      <div class="rule-name">${r.source_name}</div>
+      <div class="rule-action">${r.action}</div>
+      <span class="badge ${r.action==='intercept'?'b-eng':'b-pas'}">${r.action}</span>
+      <button class="del-btn" onclick="deleteRule(${r.id})" title="Delete rule">🗑</button>
+    </div>`).join('');
+}
+async function toggleRule(id,enabled){
+  await fetch('/api/rules/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})});
+}
+async function deleteRule(id){
+  if(!confirm('Delete this rule?'))return;
+  await fetch('/api/rules/'+id,{method:'DELETE'});
+  loadRules();
+}
+function showAddRule(){
+  const name=prompt('Lead source name (e.g. Edmunds):');if(!name)return;
+  const action=confirm('Intercept this source?\nOK = intercept  |  Cancel = pass-through')?'intercept':'pass-through';
+  fetch('/api/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_name:name,action,enabled:true})}).then(()=>loadRules());
+}
+
+async function loadPrompt() {
+  document.getElementById('prompt-status').textContent = 'loading...';
+  const data = await fetch('/api/settings/prompt').then(r=>r.json());
+  document.getElementById('system-prompt').value = data.prompt;
+  document.getElementById('prompt-status').textContent = 'loaded from server';
+}
+
+async function savePrompt() {
+  const prompt = document.getElementById('system-prompt').value.trim();
+  if (!prompt) return;
+  const saved = document.getElementById('prompt-saved');
+  const err = document.getElementById('prompt-error');
+  saved.style.display = 'none'; err.style.display = 'none';
+  try {
+    const res = await fetch('/api/settings/prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+    const data = await res.json();
+    if (data.ok) {
+      saved.style.display = 'inline';
+      document.getElementById('prompt-status').textContent = 'saved';
+      setTimeout(()=>saved.style.display='none', 3000);
+    } else { err.style.display = 'inline'; }
+  } catch(e) { err.style.display = 'inline'; }
+}
+
+async function loadUsers() {
+  const users = await fetch('/api/users').then(r=>r.json());
+  document.getElementById('users-list').innerHTML = users.length ? users.map(u=>`
+    <div class="user-row">
+      <div class="uname">${u.username}</div>
+      <span class="urole ${u.role==='admin'?'urole-admin':'urole-viewer'}">${u.role}</span>
+      <div class="ulast">${u.last_login?'Last: '+timeAgo(u.last_login):'Never logged in'}</div>
+      ${u.username!==currentUser?.username
+        ? `<button class="btn btn-red btn-sm" onclick="deleteUser(${u.id},'${u.username}')">Remove</button>`
+        : '<span style="font-family:var(--fm);font-size:9px;color:var(--dim)">You</span>'}
+    </div>`).join('') : '<div class="empty">No users</div>';
+}
+function showAddUser(){
+  const username=prompt('Username:');if(!username)return;
+  const password=prompt('Password:');if(!password)return;
+  const isAdmin=confirm('Give admin access?\nOK = admin  |  Cancel = viewer');
+  fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,role:isAdmin?'admin':'viewer'})})
+    .then(r=>r.json()).then(d=>{if(d.error)alert(d.error);else loadUsers()});
+}
+async function deleteUser(id,name){
+  if(!confirm(`Remove "${name}"?`))return;
+  await fetch('/api/users/'+id,{method:'DELETE'});
+  loadUsers();
+}
+
+async function openLead(id) {
+  document.getElementById('lead-modal').classList.add('open');
+  document.getElementById('modal-body').innerHTML='<div class="empty">Loading...</div>';
+  const lead = await fetch('/api/leads/'+id).then(r=>r.json());
+  document.getElementById('modal-title').textContent = lead.name||'Unknown';
+  document.getElementById('modal-badge').innerHTML = `<span class="badge ${badgeClass(lead.status)}">${statusLabel(lead.status)}</span>`;
+  document.getElementById('modal-test-badge').innerHTML = lead.is_test ? '<span class="test-tag">TEST</span>' : '';
+  const conv = Array.isArray(lead.conversation)?lead.conversation:JSON.parse(lead.conversation||'[]');
+  const msgs = conv.filter(m=>!m.content.startsWith('New inbound lead'));
+  const canPush = ['contacted','ai-engaged'].includes(lead.status);
+  document.getElementById('modal-body').innerHTML=`
+    <div class="mg">
+      <div class="ib"><div class="il">Vehicle</div><div class="iv">${lead.vehicle||'—'}</div></div>
+      <div class="ib"><div class="il">Source</div><div class="iv">${lead.source||'—'}</div></div>
+      <div class="ib"><div class="il">Phone</div><div class="iv">${lead.phone||'—'}</div></div>
+      <div class="ib"><div class="il">Received</div><div class="iv">${timeAgo(lead.created_at)}</div></div>
+    </div>
+    ${lead.customer_message?`<div class="ib"><div class="il">Original message</div><div class="iv" style="font-weight:400;color:var(--muted)">"${lead.customer_message}"</div></div>`:''}
+    <div>
+      <div class="fl" style="margin-bottom:8px">Conversation</div>
+      <div class="thread" id="modal-thread" style="max-height:240px">
+        ${msgs.length?msgs.map(m=>`<div class="msg ${m.role==='assistant'?'ai':'customer'}">
+          <div class="msg-lbl">${m.role==='assistant'?'AI (Jake)':'Customer'}</div>
+          <div class="bubble">${m.content}</div></div>`).join(''):'<div class="empty">No messages yet</div>'}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      ${canPush?`<button class="btn btn-green" onclick="pushToCRM(${lead.id},event)">↑ Push to CRM</button>`:''}
+      ${lead.status==='pushed-to-crm'?`<span style="color:var(--green);font-size:10px">✓ Pushed to CRM ${lead.pushed_to_crm_at?timeAgo(lead.pushed_to_crm_at):''}</span>`:''}
+      <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="deleteLeadFromModal(${lead.id})">Delete lead</button>
+    </div>`;
+  const t=document.getElementById('modal-thread');if(t)t.scrollTop=t.scrollHeight;
+}
+function closeModal(){document.getElementById('lead-modal').classList.remove('open')}
+async function pushToCRM(id,e){
+  e.currentTarget.disabled=true;e.currentTarget.textContent='Pushing...';
+  await fetch('/api/leads/'+id+'/push-crm',{method:'POST'});
+  openLead(id);
+}
+async function deleteLeadFromModal(id){
+  if(!confirm('Delete this lead permanently?'))return;
+  await fetch('/api/leads/'+id,{method:'DELETE'});
+  closeModal();loadLeads();loadDashboard();
+}
+
+function setStep(n){for(let i=0;i<4;i++){const d=document.getElementById('sd'+i);d.className='sd'+(i<n?' done':i===n?' active':'')}}
+function appendSimMsg(role,text){
+  const t=document.getElementById('sim-thread');
+  const f=t.querySelector('.empty');if(f)f.remove();
+  const d=document.createElement('div');
+  d.className='msg '+(role==='ai'?'ai':role==='note'?'note':'customer');
+  d.innerHTML=`<div class="msg-lbl">${role==='ai'?'Jake (AI)':role==='note'?'System':'Customer'}</div><div class="bubble">${text}</div>`;
+  t.appendChild(d);t.scrollTop=t.scrollHeight;
+}
+function showTyping(){
+  const t=document.getElementById('sim-thread');
+  const d=document.createElement('div');d.id='typing-ind';d.className='msg ai';
+  d.innerHTML='<div class="msg-lbl">Jake (AI)</div><div class="typing"><span></span><span></span><span></span></div>';
+  t.appendChild(d);t.scrollTop=t.scrollHeight;
+}
+function removeTyping(){const t=document.getElementById('typing-ind');if(t)t.remove()}
+
+async function fireLead(){
+  const name=document.getElementById('sim-name').value.trim();
+  const phone=document.getElementById('sim-phone').value.trim();
+  const vehicle=document.getElementById('sim-vehicle').value.trim();
+  const source=document.getElementById('sim-source').value;
+  const message=document.getElementById('sim-message').value.trim();
+  document.getElementById('sim-thread').innerHTML='';
+  document.getElementById('handoff-banner').classList.remove('show');
+  document.getElementById('reply-area').style.display='none';
+  currentLeadId=null;setStep(0);
+  document.getElementById('conv-status').textContent='intercepting...';
+  document.getElementById('fire-btn').disabled=true;
+  appendSimMsg('note',`📥 TEST lead · ${source} · ${name} · ${vehicle}`);
+  setStep(1);
+  try{
+    const res=await fetch('/api/leads/simulate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,phone,vehicle,source,customer_message:message})});
+    const data=await res.json();
+    if(!data.intercepted){
+      appendSimMsg('note',`⏭ Passed through — ${source} filter is off`);
+      document.getElementById('conv-status').textContent='passed through';
+    } else {
+      currentLeadId=data.lead.id;
+      showTyping();
+      setTimeout(()=>{
+        removeTyping();appendSimMsg('ai',data.ai_reply);setStep(2);
+        document.getElementById('conv-status').textContent='waiting for reply...';
+        const ra=document.getElementById('reply-area');ra.style.display='flex';
+        document.getElementById('reply-input').focus();
+      },300);
+    }
+  }catch(e){appendSimMsg('note','Error: '+e.message);document.getElementById('conv-status').textContent='error'}
+  document.getElementById('fire-btn').disabled=false;
+}
+
+async function sendReply(){
+  if(!currentLeadId)return;
+  const input=document.getElementById('reply-input');
+  const text=input.value.trim();if(!text)return;input.value='';
+  appendSimMsg('customer',text);setStep(3);showTyping();
+  try{
+    const res=await fetch('/api/leads/'+currentLeadId+'/reply',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,use_delay:false})});
+    const data=await res.json();removeTyping();appendSimMsg('ai',data.ai_reply);
+    if(data.two_way_contact){
+      document.getElementById('handoff-banner').classList.add('show');
+      document.getElementById('conv-status').textContent='✓ contact made — saved to DB';
+    }
+  }catch(e){removeTyping();appendSimMsg('note','Error: '+e.message)}
+}
+
+async function logout(){await fetch('/logout',{method:'POST'});window.location.href='/login'}
+
+function copyWebhook(){
+  const url=window.location.origin+'/webhook/lead';
+  navigator.clipboard.writeText(url);
+  document.getElementById('wh-display').textContent='copied!';
+  setTimeout(()=>document.getElementById('wh-display').textContent=window.location.host+'/webhook/lead',1500);
+}
+
+function tick(){document.getElementById('live-time').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+tick();setInterval(tick,1000);
+document.getElementById('wh-display').textContent=window.location.host+'/webhook/lead';
+document.getElementById('lead-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
+setInterval(()=>{if(document.getElementById('tab-dashboard').style.display!=='none')loadDashboard()},30000);
+init();
+</script>
+</body>
+</html>
