@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prelude AI — The Lightweight AI BDC</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0B09;--surface:#131310;--s2:#1A1A16;--s3:#222;
+  --border:#2A2A24;--border2:#363630;
+  --gold:#C8A84B;--gold2:#E8C96B;--gold-dim:#5A4A20;
+  --text:#F0EDE4;--muted:#888880;--dim:#444440;
+  --green:#4CAF7D;--red:#E05555;--blue:#4A9ECC;
+  --fh:'Syne',sans-serif;--fi:'Instrument Serif',serif;--fm:'DM Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fh);overflow-x:hidden;line-height:1.6}
+
+/* ── Nav ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;padding:0 40px;height:60px;background:rgba(11,11,9,.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(200,168,75,.1)}
+.nav-logo{font-size:13px;font-weight:800;letter-spacing:.1em;color:var(--gold);text-transform:uppercase}
+.nav-logo span{color:var(--muted);font-weight:400}
+.nav-links{display:flex;gap:28px;margin-left:auto;align-items:center}
+.nav-links a{font-family:var(--fm);font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:.08em;text-transform:uppercase;transition:.15s}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{background:var(--gold);color:#000;font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:4px;text-decoration:none;transition:.15s}
+.nav-cta:hover{background:var(--gold2);color:#000}
+.nav-login{background:transparent;border:1px solid var(--border2);color:var(--muted);font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:7px 16px;border-radius:4px;text-decoration:none;transition:.15s}
+.nav-login:hover{border-color:var(--gold-dim);color:var(--text)}
+
+/* ── Hero ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(200,168,75,.06) 0%,transparent 70%);pointer-events:none}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:60px 60px;opacity:.3;pointer-events:none}
+
+.hero-eyebrow{font-family:var(--fm);font-size:10px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:24px;display:flex;align-items:center;gap:10px}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';flex:1;max-width:40px;height:1px;background:var(--gold-dim)}
+
+.hero-h1{font-size:clamp(42px,7vw,88px);font-weight:800;line-height:1.0;letter-spacing:-.02em;max-width:900px;margin-bottom:8px}
+.hero-h1 em{font-family:var(--fi);font-style:italic;color:var(--gold);font-weight:400}
+.hero-sub{font-size:clamp(15px,2vw,19px);color:var(--muted);max-width:600px;margin:20px auto 40px;line-height:1.65;font-weight:400}
+
+.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-primary{background:var(--gold);color:#000;font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:14px 28px;border-radius:5px;text-decoration:none;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+.btn-primary:hover{background:var(--gold2)}
+.btn-secondary{background:transparent;border:1px solid var(--border2);color:var(--text);font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:13px 28px;border-radius:5px;text-decoration:none;transition:.15s}
+.btn-secondary:hover{border-color:var(--gold-dim)}
+
+.hero-stat-row{display:flex;gap:48px;justify-content:center;margin-top:72px;flex-wrap:wrap}
+.hero-stat{text-align:center}
+.hero-stat-val{font-size:36px;font-weight:800;color:var(--gold);line-height:1}
+.hero-stat-label{font-family:var(--fm);font-size:9px;color:var(--muted);margin-top:6px;letter-spacing:.06em;text-transform:uppercase;max-width:130px}
+
+/* ── Section ── */
+section{padding:100px 24px;max-width:1100px;margin:0 auto}
+.section-label{font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:16px}
+.section-h2{font-size:clamp(28px,4vw,48px);font-weight:800;line-height:1.1;letter-spacing:-.02em;margin-bottom:16px}
+.section-h2 em{font-family:var(--fi);font-style:italic;color:var(--gold);font-weight:400}
+.section-sub{font-size:16px;color:var(--muted);max-width:560px;line-height:1.65}
+.divider{height:1px;background:var(--border);max-width:1100px;margin:0 auto}
+
+/* ── The Problem ── */
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:48px}
+.problem-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:28px;position:relative;overflow:hidden}
+.problem-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.problem-card.bad::before{background:var(--red)}
+.problem-card.good::before{background:var(--green)}
+.pc-label{font-family:var(--fm);font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px}
+.problem-card.bad .pc-label{color:var(--red)}
+.problem-card.good .pc-label{color:var(--green)}
+.pc-h{font-size:20px;font-weight:700;margin-bottom:10px;line-height:1.2}
+.pc-body{font-size:13px;color:var(--muted);line-height:1.7}
+.pc-body strong{color:var(--text)}
+
+/* ── How it works ── */
+.how-wrap{margin-top:56px;display:flex;flex-direction:column;gap:0}
+.how-step{display:grid;grid-template-columns:64px 1fr;gap:24px;padding:28px 0;border-bottom:1px solid var(--border);align-items:start}
+.how-step:last-child{border-bottom:none}
+.how-num{font-size:11px;font-weight:700;font-family:var(--fm);color:var(--gold-dim);letter-spacing:.1em;padding-top:4px}
+.how-content h3{font-size:18px;font-weight:700;margin-bottom:6px}
+.how-content p{font-size:13px;color:var(--muted);line-height:1.7;max-width:640px}
+.how-content p strong{color:var(--text)}
+.how-tag{display:inline-block;font-family:var(--fm);font-size:9px;padding:3px 8px;border-radius:3px;margin-top:10px;letter-spacing:.06em}
+.tag-ai{background:rgba(200,168,75,.1);color:var(--gold);border:1px solid rgba(200,168,75,.2)}
+.tag-human{background:rgba(76,175,125,.1);color:var(--green);border:1px solid rgba(76,175,125,.2)}
+.tag-auto{background:rgba(74,158,204,.1);color:var(--blue);border:1px solid rgba(74,158,204,.2)}
+
+/* ── Philosophy ── */
+.philosophy-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:56px;margin-top:56px;position:relative;overflow:hidden}
+.philosophy-wrap::before{content:'"';position:absolute;top:-20px;left:40px;font-size:200px;font-family:var(--fi);color:rgba(200,168,75,.06);line-height:1;pointer-events:none}
+.phil-quote{font-size:clamp(20px,3vw,30px);font-family:var(--fi);font-style:italic;color:var(--text);line-height:1.4;max-width:760px;margin-bottom:24px}
+.phil-attr{font-family:var(--fm);font-size:10px;color:var(--muted);letter-spacing:.08em}
+.phil-points{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;padding-top:40px;border-top:1px solid var(--border)}
+.phil-point h4{font-size:14px;font-weight:700;margin-bottom:6px;color:var(--gold)}
+.phil-point p{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* ── Vs Competition ── */
+.vs-table{width:100%;border-collapse:collapse;margin-top:48px}
+.vs-table th{font-family:var(--fm);font-size:9px;color:var(--muted);text-align:left;padding:10px 16px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.08em;background:var(--surface)}
+.vs-table th.ours{color:var(--gold)}
+.vs-table td{font-size:12px;padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+.vs-table tr:last-child td{border-bottom:none}
+.vs-table tr:hover td{background:var(--surface)}
+.vs-table td:first-child{color:var(--text);font-weight:600}
+.ours-col{background:rgba(200,168,75,.04) !important;border-left:1px solid rgba(200,168,75,.15);border-right:1px solid rgba(200,168,75,.15)}
+th.ours-col{border-top:1px solid rgba(200,168,75,.3)}
+.check{color:var(--green);font-size:14px}
+.cross{color:var(--red);font-size:14px}
+.price-row td{font-weight:700;padding-top:16px;padding-bottom:16px}
+
+/* ── Pricing ── */
+.pricing-wrap{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:48px;align-items:start}
+.price-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;display:flex;flex-direction:column;gap:20px}
+.price-card.featured{border-color:rgba(200,168,75,.4);background:rgba(200,168,75,.04)}
+.price-amount{font-size:44px;font-weight:800;color:var(--gold);line-height:1}
+.price-period{font-family:var(--fm);font-size:11px;color:var(--muted)}
+.price-name{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.price-desc{font-size:13px;color:var(--muted);line-height:1.6}
+.price-features{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--border);padding-top:20px}
+.pf{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--text)}
+.pf-check{color:var(--green);flex-shrink:0;margin-top:1px}
+.price-cta{display:block;text-align:center;background:var(--gold);color:#000;font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:13px;border-radius:5px;text-decoration:none;transition:.15s;margin-top:auto}
+.price-cta:hover{background:var(--gold2)}
+.price-cta.outline{background:transparent;border:1px solid var(--border2);color:var(--text)}
+.price-cta.outline:hover{border-color:var(--gold-dim)}
+
+/* ── FAQ ── */
+.faq-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:48px}
+.faq-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px}
+.faq-q{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.faq-a{font-size:12px;color:var(--muted);line-height:1.7}
+.faq-a strong{color:var(--text)}
+
+/* ── CTA Banner ── */
+.cta-banner{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:80px 24px;text-align:center;position:relative;overflow:hidden}
+.cta-banner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 50% 50%,rgba(200,168,75,.05) 0%,transparent 70%);pointer-events:none}
+.cta-banner h2{font-size:clamp(28px,4vw,52px);font-weight:800;margin-bottom:16px;letter-spacing:-.02em}
+.cta-banner h2 em{font-family:var(--fi);font-style:italic;color:var(--gold);font-weight:400}
+.cta-banner p{font-size:15px;color:var(--muted);max-width:480px;margin:0 auto 32px;line-height:1.65}
+
+/* ── Footer ── */
+footer{padding:40px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);max-width:1100px;margin:0 auto}
+.footer-logo{font-family:var(--fm);font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+.footer-links{display:flex;gap:20px}
+.footer-links a{font-family:var(--fm);font-size:9px;color:var(--dim);text-decoration:none;letter-spacing:.08em;text-transform:uppercase;transition:.15s}
+.footer-links a:hover{color:var(--muted)}
+
+/* ── Animations ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{opacity:0;animation:fadeUp .6s ease forwards}
+.fade-up:nth-child(1){animation-delay:.1s}
+.fade-up:nth-child(2){animation-delay:.2s}
+.fade-up:nth-child(3){animation-delay:.3s}
+.fade-up:nth-child(4){animation-delay:.4s}
+
+/* ── SMS mockup ── */
+.sms-mock{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:340px;font-family:var(--fm);font-size:11px}
+.sms-header{display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.sms-avatar{width:28px;height:28px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000}
+.sms-from{font-size:11px;font-weight:600;color:var(--text)}
+.sms-sub{font-size:9px;color:var(--muted)}
+.sms-msg{display:flex;flex-direction:column;gap:8px}
+.sms-bubble{padding:8px 12px;border-radius:10px;font-size:11px;line-height:1.5;max-width:88%}
+.sms-bubble.them{background:var(--s3);color:var(--text);align-self:flex-start;border-radius:2px 10px 10px 10px}
+.sms-bubble.us{background:rgba(200,168,75,.18);border:1px solid rgba(200,168,75,.25);color:var(--text);align-self:flex-end;border-radius:10px 2px 10px 10px}
+.sms-time{font-size:8px;color:var(--dim);padding:0 4px}
+.sms-time.right{text-align:right}
+.sms-tag{font-size:8px;color:var(--green);text-align:center;padding:4px 0;letter-spacing:.06em}
+
+@media(max-width:768px){
+  nav{padding:0 20px}
+  .nav-links{display:none}
+  .problem-grid,.phil-points,.faq-grid,.pricing-wrap{grid-template-columns:1fr}
+  .philosophy-wrap{padding:32px}
+  .vs-table{font-size:11px}
+  footer{flex-direction:column;gap:16px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">Prelude <span>AI</span></div>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#why">Why us</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="/login" class="nav-login">Client login</a>
+    <a href="#pricing" class="nav-cta">Get started</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-eyebrow">The lightweight AI BDC</div>
+  <h1 class="hero-h1 fade-up">Your leads answered.<br><em>Your team stays in control.</em></h1>
+  <p class="hero-sub fade-up">Prelude texts your internet leads in 30 seconds — then hands off the warm conversation to your salesperson. No robots replacing humans. Just no more cold leads dying in silence.</p>
+  <div class="hero-ctas fade-up">
+    <a href="#pricing" class="btn-primary">See pricing →</a>
+    <a href="#how" class="btn-secondary">How it works</a>
+  </div>
+  <div class="hero-stat-row fade-up">
+    <div class="hero-stat">
+      <div class="hero-stat-val">30s</div>
+      <div class="hero-stat-label">Average AI response time</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">42hr</div>
+      <div class="hero-stat-label">Industry average response time</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">78%</div>
+      <div class="hero-stat-label">Of buyers go with who responds first</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">$799</div>
+      <div class="hero-stat-label">Per month, flat</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- The Problem -->
+<section id="why">
+  <div class="section-label">The reality</div>
+  <h2 class="section-h2">Your CRM already has AI follow-up.<br><em>So why are leads still going cold?</em></h2>
+  <p class="section-sub">Built-in CRM tools are generic, slow, and nobody configured them for your store. Your salespeople spend time on non-responders and get nothing back. That time could be spent with people ready to buy.</p>
+
+  <div class="problem-grid">
+    <div class="problem-card bad">
+      <div class="pc-label">The current situation</div>
+      <div class="pc-h">A lead comes in. Nobody texts back for 2 hours.</div>
+      <div class="pc-body">
+        Your salesperson is on the floor. The lead sits in a queue. Your CRM fires a generic email. <strong>The customer already bought down the street.</strong> This happens dozens of times a month — and you never see it because the lead just goes quiet.
+        <br><br>
+        Or your salesperson uses the CRM's built-in AI to fire a template. It works. Sort of. But it's not customized, it's not fast, and it took 10 minutes to set up for a lead that may never respond.
+      </div>
+    </div>
+    <div class="problem-card good">
+      <div class="pc-label">With Prelude</div>
+      <div class="pc-h">Lead submits. They get a personal text in 30 seconds.</div>
+      <div class="pc-body">
+        Before the lead even hits your CRM, our AI sends a real, conversational text — customized to the vehicle they asked about, from your dealership's number. <strong>When they reply, your salesperson gets the warm handoff.</strong>
+        <br><br>
+        No leads lost to silence. No salespeople wasting time on dead outreach. Just the non-responders handled automatically, and your team free to close the deals that matter.
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Philosophy -->
+<section>
+  <div class="section-label">Our philosophy</div>
+  <div class="philosophy-wrap">
+    <div class="phil-quote">"We're not replacing your BDC. We're replacing the silence between a lead coming in and your team getting on the phone."</div>
+    <div class="phil-attr">— Prelude AI</div>
+    <div class="phil-points">
+      <div class="phil-point">
+        <h4>AI handles the grunt work</h4>
+        <p>The first text, the follow-up, the "are you still interested?" — the stuff your team was doing manually with zero response rate.</p>
+      </div>
+      <div class="phil-point">
+        <h4>Humans close the deals</h4>
+        <p>The moment a customer responds, it's your salesperson's deal. They get the full conversation history and a warm handoff — not a cold intro.</p>
+      </div>
+      <div class="phil-point">
+        <h4>Your process stays yours</h4>
+        <p>No ripping out your CRM. No retraining your team. No customers wondering why they never talked to a real person. It just works in the background.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- How it works -->
+<section id="how">
+  <div class="section-label">The process</div>
+  <h2 class="section-h2">Five steps.<br><em>Fully automatic.</em></h2>
+  <p class="section-sub">From the moment a lead submits to the moment your salesperson gets the warm handoff — here's exactly what happens.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:48px;align-items:start;margin-top:48px">
+    <div class="how-wrap">
+      <div class="how-step">
+        <div class="how-num">01</div>
+        <div class="how-content">
+          <h3>Lead arrives from any source</h3>
+          <p>Cars.com, AutoTrader, your dealer website, CarGurus — any source you choose. You control which sources get intercepted and which go straight to your CRM as-is.</p>
+          <span class="how-tag tag-auto">Automatic</span>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">02</div>
+        <div class="how-content">
+          <h3>AI texts back in under 30 seconds</h3>
+          <p>A personalized, conversational text goes out immediately — using the customer's name, the specific vehicle they asked about, and one qualifying question. <strong>Not a template. A real message.</strong></p>
+          <span class="how-tag tag-ai">AI powered</span>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">03</div>
+        <div class="how-content">
+          <h3>AI continues the conversation (if they reply)</h3>
+          <p>The AI qualifies the lead — timeline, trade-in, financing preference — keeping the conversation warm until the customer is ready to take the next step.</p>
+          <span class="how-tag tag-ai">AI powered</span>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">04</div>
+        <div class="how-content">
+          <h3>Two-way contact confirmed</h3>
+          <p>The moment the customer replies, the system detects two-way contact and triggers the handoff. <strong>This is where AI stops and your team takes over.</strong></p>
+          <span class="how-tag tag-human">Human takeover</span>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">05</div>
+        <div class="how-content">
+          <h3>Salesperson gets the warm handoff</h3>
+          <p>Your salesperson receives an alert with the customer's name, vehicle interest, and the complete conversation transcript — already pushed into your CRM. They walk in knowing everything.</p>
+          <span class="how-tag tag-human">Your team closes</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SMS mockup -->
+    <div style="position:sticky;top:80px">
+      <div class="sms-mock">
+        <div class="sms-header">
+          <div class="sms-avatar">JR</div>
+          <div>
+            <div class="sms-from">Jennifer R.</div>
+            <div class="sms-sub">Cars.com lead · 2025 Buick Enclave</div>
+          </div>
+        </div>
+        <div class="sms-msg">
+          <div class="sms-bubble them">"Interested in the 2025 Enclave, what's the monthly payment?"</div>
+          <div class="sms-time">Lead received · 0 seconds ago</div>
+          <div class="sms-bubble us">Hey Jennifer! Great choice on the Enclave — that's a beautiful SUV. Are you looking to lease or finance? I can get you ballpark numbers right away.</div>
+          <div class="sms-time right" style="color:var(--green)">Sent by AI · 28 seconds later</div>
+          <div class="sms-bubble them">"Finance, probably 60 months. Do you have it in white?"</div>
+          <div class="sms-time">Jennifer replied · contact confirmed ✓</div>
+          <div class="sms-tag">🟢 HANDOFF TRIGGERED — salesman notified</div>
+          <div class="sms-bubble us">We actually have two in Summit White right now. Want to come take a look this weekend? I can have one pulled up and ready for you.</div>
+          <div class="sms-time right" style="color:var(--muted)">Your salesperson takes over here</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-family:var(--fm);font-size:9px;color:var(--dim);text-align:center;line-height:1.6">
+        Everything above the handoff line: AI.<br>Everything below: your salesperson.
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- vs Competition -->
+<section>
+  <div class="section-label">The comparison</div>
+  <h2 class="section-h2">Less than the big vendors.<br><em>More control than any of them.</em></h2>
+  <p class="section-sub">The platforms charging $2,000–$4,000/month are built for large groups who want to remove humans from the equation. We're built for stores that want to keep their people — just stop wasting their time.</p>
+
+  <table class="vs-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Podium / Impel</th>
+        <th>Virtual BDC</th>
+        <th class="ours ours-col">Prelude AI</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Instant SMS lead response</td>
+        <td><span class="check">✓</span></td>
+        <td><span class="check">✓</span></td>
+        <td class="ours-col"><span class="check">✓</span></td>
+      </tr>
+      <tr>
+        <td>24/7 coverage</td>
+        <td><span class="check">✓</span></td>
+        <td><span class="check">✓</span></td>
+        <td class="ours-col"><span class="check">✓</span></td>
+      </tr>
+      <tr>
+        <td>Pushes to your CRM with transcript</td>
+        <td><span class="check">✓</span></td>
+        <td><span class="check">✓</span></td>
+        <td class="ours-col"><span class="check">✓</span></td>
+      </tr>
+      <tr>
+        <td>Customized to your store</td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="cross">✗</span></td>
+        <td class="ours-col"><span class="check">✓</span></td>
+      </tr>
+      <tr>
+        <td>Human handoff — not full AI BDC</td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="cross">✗</span></td>
+        <td class="ours-col"><span class="check">✓</span></td>
+      </tr>
+      <tr>
+        <td>Your salespeople stay in the loop</td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="cross">✗</span></td>
+        <td class="ours-col"><span class="check">✓</span></td>
+      </tr>
+      <tr>
+        <td>No long-term contract</td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="cross">✗</span></td>
+        <td class="ours-col"><span class="check">✓</span></td>
+      </tr>
+      <tr class="price-row">
+        <td>Monthly cost</td>
+        <td style="color:var(--red)">$1,500 – $4,000</td>
+        <td style="color:var(--red)">$1,000 – $2,500</td>
+        <td class="ours-col" style="color:var(--gold);font-size:18px">$799</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="divider"></div>
+
+<!-- Pricing -->
+<section id="pricing">
+  <div class="section-label">Pricing</div>
+  <h2 class="section-h2">Simple. Flat. <em>Cancel anytime.</em></h2>
+  <p class="section-sub">No setup fees, no long-term contracts, no per-lead charges. One flat monthly rate — whether you get 50 leads or 500.</p>
+
+  <div class="pricing-wrap">
+    <div class="price-card featured">
+      <div>
+        <div class="price-name">Monthly</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:8px">
+          <div class="price-amount">$799</div>
+          <div class="price-period">/ month</div>
+        </div>
+        <div class="price-desc" style="margin-top:10px">Everything you need. No upsells, no tiers, no surprises.</div>
+      </div>
+      <div class="price-features">
+        <div class="pf"><span class="pf-check">✓</span>Instant AI text response to all intercepted leads</div>
+        <div class="pf"><span class="pf-check">✓</span>Filter by lead source — intercept only what you want</div>
+        <div class="pf"><span class="pf-check">✓</span>Full conversation transcript pushed to your CRM</div>
+        <div class="pf"><span class="pf-check">✓</span>Real-time dashboard with lead status and history</div>
+        <div class="pf"><span class="pf-check">✓</span>Individual logins for your team</div>
+        <div class="pf"><span class="pf-check">✓</span>Customized AI prompt for your dealership</div>
+        <div class="pf"><span class="pf-check">✓</span>Works with Tekion, VinSolutions, DealerSocket, Elead</div>
+        <div class="pf"><span class="pf-check">✓</span>Cancel anytime — no contracts</div>
+      </div>
+      <a href="mailto:contact@preludeleads.com" class="price-cta">Get started →</a>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="price-card">
+        <div class="price-name">The ROI math</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;font-size:12px">
+          <div style="display:flex;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">Leads lost to slow response</span>
+            <span style="color:var(--red);font-weight:700">~30–40/mo</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">Extra deals recovered</span>
+            <span style="color:var(--green);font-weight:700">5–10/mo</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">Avg gross per deal</span>
+            <span style="font-weight:700">$2,500</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-top:4px">
+            <span style="color:var(--muted)">Extra gross per month</span>
+            <span style="color:var(--gold);font-weight:700;font-size:15px">$12,500–$25,000</span>
+          </div>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-name">vs. a vendor contract</div>
+        <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7">
+          Switching from a $2,000/month vendor saves you <strong style="color:var(--green)">$14,400/year</strong>. From a $3,000/month vendor, <strong style="color:var(--green)">$26,400/year</strong>. Same outcome. Your process stays intact.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="section-label">Questions</div>
+  <h2 class="section-h2">Common questions<br><em>from GMs.</em></h2>
+  <div class="faq-grid">
+    <div class="faq-item">
+      <div class="faq-q">Will customers know they're texting an AI?</div>
+      <div class="faq-a">The AI sends conversational, personalized messages — not templates. Most customers won't notice. And the moment they engage, a real salesperson takes over. <strong>Your customers will always talk to a human before they buy.</strong></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Does this replace my salespeople or BDC?</div>
+      <div class="faq-a">No. It handles the leads that were going unanswered anyway — the ones sitting in a queue at 11pm or getting a generic CRM email 4 hours later. <strong>Your team still closes every deal.</strong></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What CRMs does it work with?</div>
+      <div class="faq-a">Tekion, VinSolutions, DealerSocket, Elead, and other major platforms. The full conversation transcript and lead details push into your CRM automatically at handoff.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">We already have AI tools in our CRM. Why this?</div>
+      <div class="faq-a">CRM built-in tools are generic and slow. They fire an hour after the lead comes in, use stock templates, and aren't configured for your store's inventory or voice. <strong>Prelude responds in 30 seconds with a message that actually sounds like you.</strong></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Do I need IT to set this up?</div>
+      <div class="faq-a">No. We handle the setup. You get a login, a dashboard, and a customized AI prompt. Most stores are live within a week of signing up.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Is there a contract?</div>
+      <div class="faq-a">Month to month. If it's not driving results within 60 days, cancel. No penalties, no questions asked. We're confident enough in the product to not need a lock-in.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Banner -->
+<div class="cta-banner">
+  <h2>Ready to stop losing leads<br><em>to silence?</em></h2>
+  <p>Ask for a 20-minute live demo. We'll fire a real lead in front of you and show you the response. No commitment, no IT required.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <a href="mailto:contact@preludeleads.com" class="btn-primary">Request a demo →</a>
+    <a href="/login" class="btn-secondary">Client login</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">Prelude AI · Dealer Intelligence</div>
+  <div class="footer-links">
+    <a href="#how">How it works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="/login">Client login</a>
+  </div>
+</footer>
+
+</body>
+</html>

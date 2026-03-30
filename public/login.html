@@ -3,54 +3,57 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lead Intercept — Sign In</title>
+<title>Prelude AI — Sign In</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --bg:#0A0A0A;--surface:#111;--s2:#191919;--border:#2A2A2A;--border2:#333;
-    --gold:#C8A84B;--gold2:#E8C96B;--gold-dim:#7A6530;
-    --text:#F0EDE6;--muted:#888;--dim:#444;--red:#E05555;
-    --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;
-  }
-  body{background:var(--bg);color:var(--text);font-family:var(--fh);min-height:100vh;display:flex;align-items:center;justify-content:center}
-  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:.35;pointer-events:none}
-  .card{position:relative;width:100%;max-width:360px;margin:20px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:36px 32px;display:flex;flex-direction:column;gap:24px}
-  .top{display:flex;flex-direction:column;gap:7px}
-  .wordmark{font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--gold);text-transform:uppercase}
-  .wordmark span{color:var(--dim)}
-  .headline{font-size:20px;font-weight:800;line-height:1.2}
-  .sub{font-family:var(--fm);font-size:10px;color:var(--muted);line-height:1.5}
-  .divider{height:1px;background:var(--border)}
-  .form{display:flex;flex-direction:column;gap:12px}
-  .fl{font-family:var(--fm);font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:.08em;text-transform:uppercase}
-  .fi{width:100%;background:var(--s2);border:1px solid var(--border2);border-radius:5px;padding:10px 12px;font-family:var(--fm);font-size:12px;color:var(--text);outline:none;transition:border-color .15s}
-  .fi:focus{border-color:var(--gold-dim)}
-  .fi::placeholder{color:var(--dim)}
-  .btn{width:100%;padding:11px;border-radius:5px;border:none;cursor:pointer;font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--gold);color:#000;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px}
-  .btn:hover{background:var(--gold2)}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
-  .error{display:none;font-family:var(--fm);font-size:10px;color:var(--red);padding:7px 10px;background:rgba(224,85,85,.07);border:1px solid rgba(224,85,85,.18);border-radius:4px}
-  .error.show{display:block}
-  .footer{font-family:var(--fm);font-size:9px;color:var(--dim);text-align:center}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .spinner{width:12px;height:12px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none}
-  .btn.loading .spinner{display:block}
-  .btn.loading .btn-text{display:none}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0B09;--surface:#131310;--s2:#1A1A16;
+  --border:#2A2A24;--border2:#363630;
+  --gold:#C8A84B;--gold2:#E8C96B;--gold-dim:#5A4A20;
+  --text:#F0EDE4;--muted:#888880;--dim:#3A3A36;--red:#E05555;
+  --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--fh);min-height:100vh;display:flex;align-items:center;justify-content:center}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:.3;pointer-events:none}
+.card{position:relative;width:100%;max-width:360px;margin:20px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:36px 32px;display:flex;flex-direction:column;gap:24px}
+.top{display:flex;flex-direction:column;gap:8px}
+.wordmark{font-size:11px;font-weight:700;letter-spacing:.16em;color:var(--gold);text-transform:uppercase}
+.wordmark span{color:var(--dim);font-weight:400}
+.headline{font-size:21px;font-weight:800;line-height:1.2}
+.sub{font-family:var(--fm);font-size:10px;color:var(--muted);line-height:1.6}
+.divider{height:1px;background:var(--border)}
+.form{display:flex;flex-direction:column;gap:12px}
+.fl{font-family:var(--fm);font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:.08em;text-transform:uppercase}
+.fi{width:100%;background:var(--s2);border:1px solid var(--border2);border-radius:5px;padding:10px 12px;font-family:var(--fm);font-size:12px;color:var(--text);outline:none;transition:border-color .15s}
+.fi:focus{border-color:var(--gold-dim)}
+.fi::placeholder{color:var(--dim)}
+.btn{width:100%;padding:11px;border-radius:5px;border:none;cursor:pointer;font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--gold);color:#000;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn:hover{background:var(--gold2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.error{display:none;font-family:var(--fm);font-size:10px;color:var(--red);padding:7px 10px;background:rgba(224,85,85,.07);border:1px solid rgba(224,85,85,.18);border-radius:4px}
+.error.show{display:block}
+.footer{font-family:var(--fm);font-size:9px;color:var(--dim);text-align:center}
+.back{font-family:var(--fm);font-size:9px;color:var(--muted);text-align:center;text-decoration:none;display:block;transition:.15s}
+.back:hover{color:var(--text)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:12px;height:12px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none}
+.btn.loading .spinner{display:block}
+.btn.loading .btn-text{display:none}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="top">
-    <div class="wordmark">Lead Intercept <span>// Dealer AI</span></div>
-    <div class="headline">Sign in to<br>your dashboard</div>
-    <div class="sub">Enter your credentials to access<br>the lead management system.</div>
+    <div class="wordmark">Prelude <span>AI</span></div>
+    <div class="headline">Client sign in</div>
+    <div class="sub">Access your lead intercept dashboard.</div>
   </div>
   <div class="divider"></div>
   <div class="form">
     <div>
       <div class="fl">Username</div>
-      <input class="fi" type="text" id="username" placeholder="your username" autofocus autocomplete="username"
+      <input class="fi" type="text" id="username" placeholder="username" autofocus autocomplete="username"
         onkeydown="if(event.key==='Enter')document.getElementById('password').focus()">
     </div>
     <div>
@@ -64,7 +67,8 @@
       <div class="spinner"></div>
     </button>
   </div>
-  <div class="footer">Internal use only · Authorized personnel</div>
+  <a href="/" class="back">← Back to preludeleads.com</a>
+  <div class="footer">Prelude AI · Authorized personnel only</div>
 </div>
 <script>
 async function login() {
@@ -76,11 +80,12 @@ async function login() {
   btn.classList.add('loading'); btn.disabled = true; err.classList.remove('show');
   try {
     const res = await fetch('/login', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
-    if (data.ok) { window.location.href = '/'; }
+    if (data.ok) { window.location.href = '/dashboard'; }
     else {
       err.textContent = data.error || 'Incorrect username or password.';
       err.classList.add('show');
@@ -88,7 +93,8 @@ async function login() {
       document.getElementById('password').focus();
     }
   } catch(e) {
-    err.textContent = 'Connection error. Try again.'; err.classList.add('show');
+    err.textContent = 'Connection error. Try again.';
+    err.classList.add('show');
   }
   btn.classList.remove('loading'); btn.disabled = false;
 }

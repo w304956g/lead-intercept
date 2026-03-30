@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lead Intercept</title>
+<title>Prelude AI — Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0A0A0A;--surface:#111;--s2:#191919;--s3:#222;
-  --border:#2A2A2A;--border2:#333;
-  --gold:#C8A84B;--gold2:#E8C96B;--gold-dim:#7A6530;
-  --text:#F0EDE6;--muted:#888;--dim:#555;
+  --bg:#0B0B09;--surface:#131310;--s2:#1A1A16;--s3:#222;
+  --border:#2A2A24;--border2:#363630;
+  --gold:#C8A84B;--gold2:#E8C96B;--gold-dim:#5A4A20;
+  --text:#F0EDE4;--muted:#888880;--dim:#444440;
   --green:#4CAF7D;--red:#E05555;--blue:#4A9ECC;--orange:#E8923A;
   --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;
 }
@@ -134,7 +134,6 @@ select.fi option{background:var(--s2)}
 .il{font-family:var(--fm);font-size:8px;color:var(--dim);margin-bottom:3px;text-transform:uppercase}
 .iv{font-size:11px;font-weight:600}
 
-/* Reports */
 .report-table{width:100%;border-collapse:collapse}
 .report-table th{font-family:var(--fm);font-size:9px;color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--s2);text-transform:uppercase;letter-spacing:.06em}
 .report-table td{font-size:11px;padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text)}
@@ -145,7 +144,6 @@ select.fi option{background:var(--s2)}
 .period-btn{font-family:var(--fm);font-size:9px;padding:4px 10px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);transition:.15s}
 .period-btn.active,.period-btn:hover{border-color:var(--gold-dim);color:var(--gold);background:rgba(200,168,75,.07)}
 
-/* User management */
 .user-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)}
 .user-row:last-child{border-bottom:none}
 .uname{font-size:12px;font-weight:600;flex:1}
@@ -164,9 +162,9 @@ select.fi option{background:var(--s2)}
 <body>
 <div class="shell">
   <div class="topbar">
-    <div class="logo">Lead Intercept <span>// Dashboard</span></div>
+    <div class="logo">Prelude <span>AI</span></div>
     <div class="topbar-right">
-      <div class="webhook-chip" onclick="copyWebhook()" title="Click to copy">📋 <span id="wh-display"></span></div>
+      <div class="webhook-chip" onclick="copyWebhook()" title="Click to copy webhook URL">📋 <span id="wh-display"></span></div>
       <div class="user-chip"><span id="user-display">—</span> <span class="role" id="role-display"></span></div>
       <button class="btn-signout" onclick="logout()">SIGN OUT</button>
       <div class="topbar-status"><div class="pulse"></div><span id="live-time"></span></div>
@@ -193,7 +191,7 @@ select.fi option{background:var(--s2)}
       <div class="stats">
         <div class="stat"><div class="stat-val gold" id="s-int">—</div><div class="stat-label">Intercepted today</div></div>
         <div class="stat"><div class="stat-val green" id="s-con">—</div><div class="stat-label">Two-way contact</div></div>
-        <div class="stat"><div class="stat-val blue" id="s-crm">—</div><div class="stat-label">Pushed to Tekion</div></div>
+        <div class="stat"><div class="stat-val blue" id="s-crm">—</div><div class="stat-label">Pushed to CRM</div></div>
         <div class="stat"><div class="stat-val" id="s-pas">—</div><div class="stat-label">Passed through</div></div>
       </div>
       <div class="panel">
@@ -230,14 +228,8 @@ select.fi option{background:var(--s2)}
         <div id="report-source"><div class="empty">Loading...</div></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-        <div class="panel">
-          <div class="ph"><span class="pt">By status</span></div>
-          <div id="report-status"><div class="empty">Loading...</div></div>
-        </div>
-        <div class="panel">
-          <div class="ph"><span class="pt">Daily volume</span></div>
-          <div id="report-daily"><div class="empty">Loading...</div></div>
-        </div>
+        <div class="panel"><div class="ph"><span class="pt">By status</span></div><div id="report-status"><div class="empty">Loading...</div></div></div>
+        <div class="panel"><div class="ph"><span class="pt">Daily volume</span></div><div id="report-daily"><div class="empty">Loading...</div></div></div>
       </div>
     </div>
 
@@ -255,32 +247,21 @@ select.fi option{background:var(--s2)}
     <!-- AI PROMPT -->
     <div id="tab-prompt" class="tab-content" style="display:none">
       <div class="panel">
-        <div class="ph"><span class="pt">AI system prompt</span></div>
+        <div class="ph"><span class="pt">AI system prompt</span><span class="ps" id="prompt-status">loading...</span></div>
         <div class="pb" style="display:flex;flex-direction:column;gap:10px">
-          <div class="fl">Prompt — controls how Claude responds to leads</div>
-          <textarea class="fi" id="system-prompt" rows="11" style="resize:vertical;line-height:1.6">You are a BDC assistant for an automotive dealership. You respond to inbound vehicle leads via text message.
-
-Goals:
-1. Respond fast — speed matters most
-2. Confirm the customer's interest in the specific vehicle
-3. Ask one qualifying question (timeline, trade-in, or financing)
-4. Set an appointment or get them to confirm they want more info
-5. Keep messages short, friendly, and conversational — not salesy
-
-Rules:
-- Never send more than 2 messages before the customer replies
-- Always use the customer's first name
-- If they ask for a price, share a ballpark and invite them in
-- If they're ready to come in, alert the sales team immediately</textarea>
+          <div class="fl">Controls how the AI responds to leads — changes take effect immediately</div>
+          <textarea class="fi" id="system-prompt" rows="16" style="resize:vertical;line-height:1.6">Loading...</textarea>
           <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn btn-gold" onclick="savePrompt()">Save prompt</button>
-            <span id="prompt-saved" style="display:none;font-family:var(--fm);font-size:10px;color:var(--green)">✓ Saved</span>
+            <button class="btn btn-gold" onclick="savePrompt()">Save to server</button>
+            <button class="btn btn-outline" onclick="loadPrompt()">Reset from server</button>
+            <span id="prompt-saved" style="display:none;font-family:var(--fm);font-size:10px;color:var(--green)">✓ Saved — active on next lead</span>
+            <span id="prompt-error" style="display:none;font-family:var(--fm);font-size:10px;color:var(--red)">Error saving</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- USERS (admin only) -->
+    <!-- USERS -->
     <div id="tab-users" class="tab-content" style="display:none">
       <div class="panel">
         <div class="ph">
@@ -295,7 +276,7 @@ Rules:
     <div id="tab-sim" class="tab-content" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div class="panel">
-          <div class="ph"><span class="pt">Inbound lead</span><span class="ps">marked as TEST</span></div>
+          <div class="ph"><span class="pt">Inbound lead</span><span class="ps">marked as TEST · no send delay</span></div>
           <div class="pb" style="display:flex;flex-direction:column;gap:10px">
             <div class="fg">
               <div><div class="fl">First name</div><input class="fi" id="sim-name" value="Chris"></div>
@@ -323,7 +304,7 @@ Rules:
             <div class="handoff" id="handoff-banner">
               <div class="handoff-text">
                 <strong>✓ Two-way contact — handoff triggered</strong>
-                Transcript saved. Ready to push to Tekion.
+                Transcript saved. Ready to push to CRM.
               </div>
             </div>
           </div>
@@ -348,12 +329,10 @@ Rules:
 </div>
 
 <script>
-// ── State ──────────────────────────────────────────────
 let currentLeadId = null;
 let currentUser = null;
 let reportPeriod = 7;
 
-// ── Init ───────────────────────────────────────────────
 async function init() {
   const me = await fetch('/api/me').then(r=>r.json());
   currentUser = me;
@@ -365,7 +344,6 @@ async function init() {
   loadDashboard();
 }
 
-// ── Nav ────────────────────────────────────────────────
 document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
   item.addEventListener('click', () => {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -378,10 +356,10 @@ document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
     if (tab==='reports') loadReports();
     if (tab==='rules') loadRules();
     if (tab==='users') loadUsers();
+    if (tab==='prompt') loadPrompt();
   });
 });
 
-// ── Helpers ────────────────────────────────────────────
 function timeAgo(ts) {
   const d = Math.floor((Date.now()-new Date(ts))/1000);
   if (d<60) return d+'s ago';
@@ -397,12 +375,12 @@ function srcClass(s) {
   return 'src-default';
 }
 function dotClass(s){return{intercepted:'db','ai-engaged':'dau',contacted:'dg','pushed-to-crm':'dg','passed-through':'dd',error:'dd'}[s]||'dd'}
-function statusLabel(s){return{'intercepted':'Intercepted','ai-engaged':'AI engaged','contacted':'2-way contact','pushed-to-crm':'In Tekion','passed-through':'Passed','error':'Error'}[s]||s}
+function statusLabel(s){return{'intercepted':'Intercepted','ai-engaged':'AI engaged','contacted':'2-way contact','pushed-to-crm':'In CRM','passed-through':'Passed','error':'Error'}[s]||s}
 function badgeClass(s){return{'intercepted':'b-int','ai-engaged':'b-eng','contacted':'b-con','pushed-to-crm':'b-crm','passed-through':'b-pas','error':'b-err'}[s]||'b-pas'}
 
 function leadRowHTML(lead, showDelete=false) {
   const testBadge = lead.is_test ? '<span class="test-tag">TEST</span>' : '';
-  const delBtn = showDelete ? `<button class="del-btn" onclick="deleteLead(event,${lead.id})" title="Delete lead">🗑</button>` : '';
+  const delBtn = showDelete ? `<button class="del-btn" onclick="deleteLead(event,${lead.id})" title="Delete">🗑</button>` : '';
   return `<div class="lead-row" onclick="openLead(${lead.id})">
     <span class="src-tag ${srcClass(lead.source)}">${lead.source||'Unknown'}</span>
     ${testBadge}
@@ -413,7 +391,6 @@ function leadRowHTML(lead, showDelete=false) {
   </div>`;
 }
 
-// ── Dashboard ──────────────────────────────────────────
 async function loadDashboard() {
   const [stats, leads] = await Promise.all([
     fetch('/api/stats').then(r=>r.json()),
@@ -425,24 +402,20 @@ async function loadDashboard() {
   document.getElementById('s-pas').textContent = stats.passed_today||0;
   document.getElementById('dash-ts').textContent = 'updated '+new Date().toLocaleTimeString();
   const feed = document.getElementById('dash-feed');
-  const recent = leads.slice(0,10);
-  feed.innerHTML = recent.length ? recent.map(l=>leadRowHTML(l,false)).join('') : '<div class="empty">No real leads yet — fire a simulator lead to test</div>';
-  const active = leads.filter(l=>['intercepted','ai-engaged'].includes(l.status)).length;
-  document.getElementById('leads-badge').textContent = active || leads.length;
+  feed.innerHTML = leads.length ? leads.slice(0,10).map(l=>leadRowHTML(l)).join('') : '<div class="empty">No real leads yet — fire a simulator lead to test</div>';
+  document.getElementById('leads-badge').textContent = leads.filter(l=>['intercepted','ai-engaged'].includes(l.status)).length || leads.length;
 }
 
-// ── All Leads ──────────────────────────────────────────
 async function loadLeads() {
   const showTest = document.getElementById('show-test-toggle')?.checked;
   const leads = await fetch('/api/leads?show_test='+(showTest?'true':'false')).then(r=>r.json());
   document.getElementById('leads-count').textContent = leads.length+' leads';
-  const list = document.getElementById('leads-list');
-  list.innerHTML = leads.length ? leads.map(l=>leadRowHTML(l,true)).join('') : '<div class="empty">No leads yet</div>';
+  document.getElementById('leads-list').innerHTML = leads.length ? leads.map(l=>leadRowHTML(l,true)).join('') : '<div class="empty">No leads yet</div>';
 }
 
 async function deleteLead(e, id) {
   e.stopPropagation();
-  if (!confirm('Delete this lead? This cannot be undone.')) return;
+  if (!confirm('Delete this lead permanently?')) return;
   await fetch('/api/leads/'+id, {method:'DELETE'});
   loadLeads();
 }
@@ -450,11 +423,10 @@ async function deleteLead(e, id) {
 async function clearTestLeads() {
   if (!confirm('Delete all test leads? This cannot be undone.')) return;
   const d = await fetch('/api/leads?test_only=true', {method:'DELETE'}).then(r=>r.json());
-  alert(`Deleted ${d.deleted} test leads.`);
+  alert(`Deleted ${d.deleted} test lead${d.deleted===1?'':'s'}.`);
   loadLeads();
 }
 
-// ── Reports ────────────────────────────────────────────
 function setReportPeriod(days, btn) {
   reportPeriod = days;
   document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
@@ -464,63 +436,46 @@ function setReportPeriod(days, btn) {
 
 async function loadReports() {
   const data = await fetch('/api/reports?days='+reportPeriod).then(r=>r.json());
-
-  // By source table
   const srcEl = document.getElementById('report-source');
   if (!data.by_source.length) {
-    srcEl.innerHTML = '<div class="empty">No data yet</div>';
+    srcEl.innerHTML = '<div class="empty">No data yet — needs real leads</div>';
   } else {
     srcEl.innerHTML = `<table class="report-table">
-      <thead><tr>
-        <th>Source</th><th>Total leads</th><th>Responded</th><th>In Tekion</th><th>No response</th><th>Contact rate</th>
-      </tr></thead>
+      <thead><tr><th>Source</th><th>Total</th><th>Responded</th><th>In CRM</th><th>No response</th><th>Contact rate</th></tr></thead>
       <tbody>${data.by_source.map(r=>`<tr>
         <td><span class="src-tag ${srcClass(r.source)}">${r.source}</span></td>
         <td style="font-weight:700">${r.total}</td>
         <td style="color:var(--green)">${r.contacted}</td>
         <td style="color:var(--blue)">${r.pushed_to_crm}</td>
         <td style="color:var(--red)">${r.no_response}</td>
-        <td>
-          <div style="font-weight:700;color:${r.contact_rate>=50?'var(--green)':r.contact_rate>=25?'var(--gold)':'var(--red)'}">${r.contact_rate||0}%</div>
-          <div class="rate-bar"><div class="rate-fill" style="width:${r.contact_rate||0}%;background:${r.contact_rate>=50?'var(--green)':r.contact_rate>=25?'var(--gold)':'var(--red)'}"></div></div>
-        </td>
-      </tr>`).join('')}</tbody>
-    </table>`;
+        <td><div style="font-weight:700;color:${r.contact_rate>=50?'var(--green)':r.contact_rate>=25?'var(--gold)':'var(--red)'}">${r.contact_rate||0}%</div>
+        <div class="rate-bar"><div class="rate-fill" style="width:${r.contact_rate||0}%;background:${r.contact_rate>=50?'var(--green)':r.contact_rate>=25?'var(--gold)':'var(--red)'}"></div></div></td>
+      </tr>`).join('')}</tbody></table>`;
   }
-
-  // By status
   const statEl = document.getElementById('report-status');
-  if (!data.by_status.length) {
-    statEl.innerHTML = '<div class="empty">No data yet</div>';
-  } else {
+  if (!data.by_status.length) { statEl.innerHTML = '<div class="empty">No data yet</div>'; }
+  else {
     const total = data.by_status.reduce((a,r)=>a+parseInt(r.count),0);
     statEl.innerHTML = `<div style="padding:12px;display:flex;flex-direction:column;gap:8px">
-      ${data.by_status.map(r=>`
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="badge ${badgeClass(r.status)}" style="min-width:90px;text-align:center">${statusLabel(r.status)}</span>
-          <div class="rate-bar" style="flex:1;height:6px"><div class="rate-fill" style="width:${Math.round(r.count/total*100)}%"></div></div>
-          <span style="font-family:var(--fm);font-size:10px;color:var(--text);min-width:30px;text-align:right">${r.count}</span>
-        </div>`).join('')}
-    </div>`;
+      ${data.by_status.map(r=>`<div style="display:flex;align-items:center;gap:8px">
+        <span class="badge ${badgeClass(r.status)}" style="min-width:90px;text-align:center">${statusLabel(r.status)}</span>
+        <div class="rate-bar" style="flex:1;height:6px"><div class="rate-fill" style="width:${Math.round(r.count/total*100)}%"></div></div>
+        <span style="font-family:var(--fm);font-size:10px;min-width:24px;text-align:right">${r.count}</span>
+      </div>`).join('')}</div>`;
   }
-
-  // Daily
   const dailyEl = document.getElementById('report-daily');
-  if (!data.daily.length) {
-    dailyEl.innerHTML = '<div class="empty">No data yet</div>';
-  } else {
+  if (!data.daily.length) { dailyEl.innerHTML = '<div class="empty">No data yet</div>'; }
+  else {
     dailyEl.innerHTML = `<table class="report-table">
       <thead><tr><th>Date</th><th>Total</th><th>Contacted</th></tr></thead>
       <tbody>${data.daily.slice(0,14).map(r=>`<tr>
         <td style="font-family:var(--fm);font-size:10px">${new Date(r.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
         <td style="font-weight:700">${r.total}</td>
         <td style="color:var(--green)">${r.contacted}</td>
-      </tr>`).join('')}</tbody>
-    </table>`;
+      </tr>`).join('')}</tbody></table>`;
   }
 }
 
-// ── Filter Rules ───────────────────────────────────────
 async function loadRules() {
   const rules = await fetch('/api/rules').then(r=>r.json());
   document.getElementById('rules-list').innerHTML = rules.map(r=>`
@@ -535,21 +490,44 @@ async function loadRules() {
       <button class="del-btn" onclick="deleteRule(${r.id})" title="Delete rule">🗑</button>
     </div>`).join('');
 }
-async function toggleRule(id,enabled){await fetch('/api/rules/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})})}
-async function deleteRule(id){if(!confirm('Delete this rule?'))return;await fetch('/api/rules/'+id,{method:'DELETE'});loadRules()}
+async function toggleRule(id,enabled){
+  await fetch('/api/rules/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})});
+}
+async function deleteRule(id){
+  if(!confirm('Delete this rule?'))return;
+  await fetch('/api/rules/'+id,{method:'DELETE'});
+  loadRules();
+}
 function showAddRule(){
   const name=prompt('Lead source name (e.g. Edmunds):');if(!name)return;
   const action=confirm('Intercept this source?\nOK = intercept  |  Cancel = pass-through')?'intercept':'pass-through';
   fetch('/api/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_name:name,action,enabled:true})}).then(()=>loadRules());
 }
 
-// ── Prompt ─────────────────────────────────────────────
-function savePrompt(){
-  document.getElementById('prompt-saved').style.display='block';
-  setTimeout(()=>document.getElementById('prompt-saved').style.display='none',2000);
+async function loadPrompt() {
+  document.getElementById('prompt-status').textContent = 'loading...';
+  const data = await fetch('/api/settings/prompt').then(r=>r.json());
+  document.getElementById('system-prompt').value = data.prompt;
+  document.getElementById('prompt-status').textContent = 'loaded from server';
 }
 
-// ── Users (admin) ──────────────────────────────────────
+async function savePrompt() {
+  const prompt = document.getElementById('system-prompt').value.trim();
+  if (!prompt) return;
+  const saved = document.getElementById('prompt-saved');
+  const err = document.getElementById('prompt-error');
+  saved.style.display = 'none'; err.style.display = 'none';
+  try {
+    const res = await fetch('/api/settings/prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+    const data = await res.json();
+    if (data.ok) {
+      saved.style.display = 'inline';
+      document.getElementById('prompt-status').textContent = 'saved';
+      setTimeout(()=>saved.style.display='none', 3000);
+    } else { err.style.display = 'inline'; }
+  } catch(e) { err.style.display = 'inline'; }
+}
+
 async function loadUsers() {
   const users = await fetch('/api/users').then(r=>r.json());
   document.getElementById('users-list').innerHTML = users.length ? users.map(u=>`
@@ -557,25 +535,24 @@ async function loadUsers() {
       <div class="uname">${u.username}</div>
       <span class="urole ${u.role==='admin'?'urole-admin':'urole-viewer'}">${u.role}</span>
       <div class="ulast">${u.last_login?'Last: '+timeAgo(u.last_login):'Never logged in'}</div>
-      ${u.username!==currentUser?.username?`<button class="btn btn-red btn-sm" onclick="deleteUser(${u.id},'${u.username}')">Remove</button>`:'<span style="font-family:var(--fm);font-size:9px;color:var(--dim)">You</span>'}
+      ${u.username!==currentUser?.username
+        ? `<button class="btn btn-red btn-sm" onclick="deleteUser(${u.id},'${u.username}')">Remove</button>`
+        : '<span style="font-family:var(--fm);font-size:9px;color:var(--dim)">You</span>'}
     </div>`).join('') : '<div class="empty">No users</div>';
 }
-
 function showAddUser(){
   const username=prompt('Username:');if(!username)return;
   const password=prompt('Password:');if(!password)return;
-  const isAdmin=confirm('Admin access?\nOK = admin  |  Cancel = viewer');
+  const isAdmin=confirm('Give admin access?\nOK = admin  |  Cancel = viewer');
   fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,role:isAdmin?'admin':'viewer'})})
     .then(r=>r.json()).then(d=>{if(d.error)alert(d.error);else loadUsers()});
 }
-
 async function deleteUser(id,name){
-  if(!confirm(`Remove user "${name}"? They will be signed out immediately.`))return;
+  if(!confirm(`Remove "${name}"?`))return;
   await fetch('/api/users/'+id,{method:'DELETE'});
   loadUsers();
 }
 
-// ── Lead Modal ─────────────────────────────────────────
 async function openLead(id) {
   document.getElementById('lead-modal').classList.add('open');
   document.getElementById('modal-body').innerHTML='<div class="empty">Loading...</div>';
@@ -583,11 +560,9 @@ async function openLead(id) {
   document.getElementById('modal-title').textContent = lead.name||'Unknown';
   document.getElementById('modal-badge').innerHTML = `<span class="badge ${badgeClass(lead.status)}">${statusLabel(lead.status)}</span>`;
   document.getElementById('modal-test-badge').innerHTML = lead.is_test ? '<span class="test-tag">TEST</span>' : '';
-
   const conv = Array.isArray(lead.conversation)?lead.conversation:JSON.parse(lead.conversation||'[]');
   const msgs = conv.filter(m=>!m.content.startsWith('New inbound lead'));
   const canPush = ['contacted','ai-engaged'].includes(lead.status);
-
   document.getElementById('modal-body').innerHTML=`
     <div class="mg">
       <div class="ib"><div class="il">Vehicle</div><div class="iv">${lead.vehicle||'—'}</div></div>
@@ -600,48 +575,42 @@ async function openLead(id) {
       <div class="fl" style="margin-bottom:8px">Conversation</div>
       <div class="thread" id="modal-thread" style="max-height:240px">
         ${msgs.length?msgs.map(m=>`<div class="msg ${m.role==='assistant'?'ai':'customer'}">
-          <div class="msg-lbl">${m.role==='assistant'?'AI Agent':'Customer'}</div>
+          <div class="msg-lbl">${m.role==='assistant'?'AI (Jake)':'Customer'}</div>
           <div class="bubble">${m.content}</div></div>`).join(''):'<div class="empty">No messages yet</div>'}
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      ${canPush?`<button class="btn btn-green" onclick="pushToCRM(${lead.id})">↑ Push to Tekion</button>`:''}
-      ${lead.status==='pushed-to-crm'?`<span style="color:var(--green);font-size:10px">✓ In Tekion ${lead.pushed_to_crm_at?timeAgo(lead.pushed_to_crm_at):''}</span>`:''}
+      ${canPush?`<button class="btn btn-green" onclick="pushToCRM(${lead.id},event)">↑ Push to CRM</button>`:''}
+      ${lead.status==='pushed-to-crm'?`<span style="color:var(--green);font-size:10px">✓ Pushed to CRM ${lead.pushed_to_crm_at?timeAgo(lead.pushed_to_crm_at):''}</span>`:''}
       <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="deleteLeadFromModal(${lead.id})">Delete lead</button>
     </div>`;
-
   const t=document.getElementById('modal-thread');if(t)t.scrollTop=t.scrollHeight;
 }
-
 function closeModal(){document.getElementById('lead-modal').classList.remove('open')}
-
-async function pushToCRM(id){
-  event.currentTarget.disabled=true;event.currentTarget.textContent='Pushing...';
-  await fetch('/api/leads/'+id+'/push-crm',{method:'POST'});openLead(id);
+async function pushToCRM(id,e){
+  e.currentTarget.disabled=true;e.currentTarget.textContent='Pushing...';
+  await fetch('/api/leads/'+id+'/push-crm',{method:'POST'});
+  openLead(id);
 }
-
 async function deleteLeadFromModal(id){
   if(!confirm('Delete this lead permanently?'))return;
   await fetch('/api/leads/'+id,{method:'DELETE'});
   closeModal();loadLeads();loadDashboard();
 }
 
-// ── Simulator ──────────────────────────────────────────
 function setStep(n){for(let i=0;i<4;i++){const d=document.getElementById('sd'+i);d.className='sd'+(i<n?' done':i===n?' active':'')}}
-
 function appendSimMsg(role,text){
   const t=document.getElementById('sim-thread');
   const f=t.querySelector('.empty');if(f)f.remove();
   const d=document.createElement('div');
   d.className='msg '+(role==='ai'?'ai':role==='note'?'note':'customer');
-  d.innerHTML=`<div class="msg-lbl">${role==='ai'?'AI Agent':role==='note'?'System':'Customer'}</div><div class="bubble">${text}</div>`;
+  d.innerHTML=`<div class="msg-lbl">${role==='ai'?'Jake (AI)':role==='note'?'System':'Customer'}</div><div class="bubble">${text}</div>`;
   t.appendChild(d);t.scrollTop=t.scrollHeight;
 }
-
 function showTyping(){
   const t=document.getElementById('sim-thread');
   const d=document.createElement('div');d.id='typing-ind';d.className='msg ai';
-  d.innerHTML='<div class="msg-lbl">AI Agent</div><div class="typing"><span></span><span></span><span></span></div>';
+  d.innerHTML='<div class="msg-lbl">Jake (AI)</div><div class="typing"><span></span><span></span><span></span></div>';
   t.appendChild(d);t.scrollTop=t.scrollHeight;
 }
 function removeTyping(){const t=document.getElementById('typing-ind');if(t)t.remove()}
@@ -652,19 +621,17 @@ async function fireLead(){
   const vehicle=document.getElementById('sim-vehicle').value.trim();
   const source=document.getElementById('sim-source').value;
   const message=document.getElementById('sim-message').value.trim();
-
   document.getElementById('sim-thread').innerHTML='';
   document.getElementById('handoff-banner').classList.remove('show');
   document.getElementById('reply-area').style.display='none';
   currentLeadId=null;setStep(0);
   document.getElementById('conv-status').textContent='intercepting...';
   document.getElementById('fire-btn').disabled=true;
-
-  appendSimMsg('note',`📥 TEST lead from ${source} · ${name} · ${vehicle}`);
+  appendSimMsg('note',`📥 TEST lead · ${source} · ${name} · ${vehicle}`);
   setStep(1);
-
   try{
-    const res=await fetch('/api/leads/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone,vehicle,source,customer_message:message})});
+    const res=await fetch('/api/leads/simulate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,phone,vehicle,source,customer_message:message})});
     const data=await res.json();
     if(!data.intercepted){
       appendSimMsg('note',`⏭ Passed through — ${source} filter is off`);
@@ -689,16 +656,18 @@ async function sendReply(){
   const text=input.value.trim();if(!text)return;input.value='';
   appendSimMsg('customer',text);setStep(3);showTyping();
   try{
-    const res=await fetch('/api/leads/'+currentLeadId+'/reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});
+    const res=await fetch('/api/leads/'+currentLeadId+'/reply',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,use_delay:false})});
     const data=await res.json();removeTyping();appendSimMsg('ai',data.ai_reply);
-    if(data.two_way_contact){document.getElementById('handoff-banner').classList.add('show');document.getElementById('conv-status').textContent='✓ contact made'}
+    if(data.two_way_contact){
+      document.getElementById('handoff-banner').classList.add('show');
+      document.getElementById('conv-status').textContent='✓ contact made — saved to DB';
+    }
   }catch(e){removeTyping();appendSimMsg('note','Error: '+e.message)}
 }
 
-// ── Auth ───────────────────────────────────────────────
 async function logout(){await fetch('/logout',{method:'POST'});window.location.href='/login'}
 
-// ── Webhook ────────────────────────────────────────────
 function copyWebhook(){
   const url=window.location.origin+'/webhook/lead';
   navigator.clipboard.writeText(url);
@@ -706,13 +675,11 @@ function copyWebhook(){
   setTimeout(()=>document.getElementById('wh-display').textContent=window.location.host+'/webhook/lead',1500);
 }
 
-// ── Clock ──────────────────────────────────────────────
 function tick(){document.getElementById('live-time').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 tick();setInterval(tick,1000);
 document.getElementById('wh-display').textContent=window.location.host+'/webhook/lead';
 document.getElementById('lead-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
 setInterval(()=>{if(document.getElementById('tab-dashboard').style.display!=='none')loadDashboard()},30000);
-
 init();
 </script>
 </body>

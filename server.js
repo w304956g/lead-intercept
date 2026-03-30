@@ -12,6 +12,39 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
+const DEFAULT_PROMPT = `You are Jake, a sales associate at a car dealership. You respond to inbound vehicle inquiries via text message on behalf of the dealership. You are warm, casual, and helpful — like a real salesperson who happens to be good at texting.
+
+Your goals:
+1. Make the customer feel like they reached a real person immediately
+2. Confirm their interest in the specific vehicle they asked about
+3. Ask one natural qualifying question — timeline, trade-in, or financing
+4. Move toward an appointment or a commitment to keep talking
+5. Keep every message short — 2-4 sentences maximum
+
+Rules for how you write:
+- Write exactly like a real person texting. Casual, natural, no corporate language
+- Use the customer's first name once at the start, then drop it
+- Never use bullet points, numbered lists, or formal greetings like "Hello" or "Good afternoon"
+- Never use phrases like "I'd be happy to," "Certainly," "Great question," or anything that sounds like a chatbot
+- Vary your sentence structure and message length every time — never follow the same pattern twice
+- Occasional minor imperfections are fine — a lowercase start, a relaxed contraction, a short fragment. Real people text like that
+- Never send more than 2 messages before the customer replies
+- Never mention price unless they ask first
+- If they ask for a price, give a real ballpark and immediately invite them in
+- If they say they're ready to come in, express genuine enthusiasm and ask when works for them
+
+If the customer directly asks whether you are a real person or an AI:
+- Do not lie. Respond with something like: "I'm an automated assistant helping out for the dealership — but a real member of our team is going to be following up with you directly. They'll have everything we've talked about."
+- Then immediately continue the conversation naturally
+
+Tone examples:
+- Good: "hey Marcus! yeah that Denali just came back in stock actually — are you thinking about financing or did you want to pay cash?"
+- Good: "white is actually one of the harder ones to keep on the lot lol — we have one left. when were you thinking about coming in?"
+- Bad: "Hello Marcus! I'd be happy to assist you with your inquiry about the 2025 GMC Sierra 1500 Denali."
+- Bad: "Great question! Here are some options I can offer you:"
+
+The customer should feel like they caught a salesperson between customers who picked up their phone and responded. Not like they submitted a form and got an auto-reply.`;
+
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -52,31 +85,43 @@ async function initDB() {
       contacted_at TIMESTAMPTZ,
       pushed_to_crm_at TIMESTAMPTZ
     );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 
   await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT false`).catch(() => {});
 
-  const { rowCount: userCount } = await pool.query('SELECT 1 FROM users LIMIT 1');
-  if (userCount === 0) {
+  // Seed admin user
+  const { rowCount: uc } = await pool.query('SELECT 1 FROM users LIMIT 1');
+  if (uc === 0) {
     const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
     const hash = crypto.createHash('sha256').update(adminPass).digest('hex');
-    await pool.query(
-      `INSERT INTO users (username, password_hash, role) VALUES ($1, $2, 'admin')`,
-      ['admin', hash]
-    );
-    console.log(`Admin created — username: admin  password: ${adminPass}`);
+    await pool.query(`INSERT INTO users (username,password_hash,role) VALUES ($1,$2,'admin')`, ['admin', hash]);
+    console.log(`Admin created — user: admin  pass: ${adminPass}`);
   }
 
-  const { rowCount } = await pool.query('SELECT 1 FROM filter_rules LIMIT 1');
-  if (rowCount === 0) {
+  // Seed filter rules
+  const { rowCount: rc } = await pool.query('SELECT 1 FROM filter_rules LIMIT 1');
+  if (rc === 0) {
     await pool.query(`
-      INSERT INTO filter_rules (source_name, action, enabled) VALUES
+      INSERT INTO filter_rules (source_name,action,enabled) VALUES
         ('Cars.com','intercept',true),('AutoTrader','intercept',true),
         ('Dealer site','intercept',true),('CarGurus','intercept',true),
         ('Edmunds','intercept',false),('Phone','pass-through',false)
       ON CONFLICT DO NOTHING;
     `);
   }
+
+  // Seed default prompt
+  await pool.query(`
+    INSERT INTO settings (key,value) VALUES ('system_prompt',$1)
+    ON CONFLICT (key) DO NOTHING
+  `, [DEFAULT_PROMPT]);
+
   console.log('DB ready');
 }
 
@@ -103,8 +148,8 @@ function getToken(req) {
 }
 
 async function requireAuth(req, res, next) {
-  const openPaths = ['/login', '/logout', '/login.html'];
-  if (openPaths.includes(req.path) || req.path.startsWith('/webhook/') || req.path.match(/\.(css|js|png|ico)$/)) {
+  const openPaths = ['/', '/login', '/logout', '/login.html', '/marketing.html'];
+  if (openPaths.includes(req.path) || req.path.startsWith('/webhook/') || req.path.match(/\.(css|js|png|ico|woff|woff2|jpg|svg)$/)) {
     return next();
   }
   const user = await getUserFromRequest(req);
@@ -134,12 +179,9 @@ app.post('/login', async (req, res) => {
     [username?.toLowerCase().trim(), hashPass(password || '')]
   );
   if (!rows[0]) return res.status(401).json({ error: 'Invalid username or password' });
-
   const token = genToken();
-  await pool.query(
-    'INSERT INTO sessions (token, user_id, expires_at) VALUES ($1,$2,$3)',
-    [token, rows[0].id, new Date(Date.now() + 30*24*60*60*1000)]
-  );
+  await pool.query('INSERT INTO sessions (token,user_id,expires_at) VALUES ($1,$2,$3)',
+    [token, rows[0].id, new Date(Date.now() + 30*24*60*60*1000)]);
   await pool.query('UPDATE users SET last_login=NOW() WHERE id=$1', [rows[0].id]);
   res.setHeader('Set-Cookie', `session=${token}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Strict`);
   res.json({ ok: true, user: { username: rows[0].username, role: rows[0].role } });
@@ -154,7 +196,7 @@ app.post('/logout', async (req, res) => {
 
 app.get('/api/me', (req, res) => res.json({ username: req.user.username, role: req.user.role }));
 
-// ── User management ───────────────────────────────────
+// ── Users ─────────────────────────────────────────────
 app.get('/api/users', requireAdmin, async (req, res) => {
   const { rows } = await pool.query('SELECT id,username,role,created_at,last_login FROM users ORDER BY created_at');
   res.json(rows);
@@ -169,7 +211,7 @@ app.post('/api/users', requireAdmin, async (req, res) => {
       [username.toLowerCase().trim(), hashPass(password), role || 'viewer']
     );
     res.json(rows[0]);
-  } catch (e) {
+  } catch(e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Username already exists' });
     throw e;
   }
@@ -188,21 +230,48 @@ app.patch('/api/users/:id/password', requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Settings (prompt) ─────────────────────────────────
+app.get('/api/settings/prompt', async (req, res) => {
+  const { rows } = await pool.query(`SELECT value FROM settings WHERE key='system_prompt'`);
+  res.json({ prompt: rows[0]?.value || DEFAULT_PROMPT });
+});
+
+app.post('/api/settings/prompt', async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).json({ error: 'Prompt required' });
+  await pool.query(
+    `INSERT INTO settings (key,value,updated_at) VALUES ('system_prompt',$1,NOW())
+     ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`,
+    [prompt]
+  );
+  res.json({ ok: true });
+});
+
 // ── Claude ────────────────────────────────────────────
+async function getPrompt() {
+  const { rows } = await pool.query(`SELECT value FROM settings WHERE key='system_prompt'`);
+  return rows[0]?.value || DEFAULT_PROMPT;
+}
+
 async function callClaude(system, messages) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01' },
-    body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000, system, messages })
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system, messages })
   });
   const d = await r.json();
   if (d.error) throw new Error(d.error.message);
   return d.content?.[0]?.text || '';
 }
 
-const DEFAULT_PROMPT = `You are a BDC assistant for an automotive dealership. Respond to inbound vehicle leads via text message.
-Goals: respond fast, confirm vehicle interest, ask one qualifying question (timeline/trade/financing), set appointment.
-Rules: keep it short and conversational, use first name, never send more than 2 messages before they reply.`;
+// Randomized delay 45s-3min for humanized feel (simulator only uses 0 delay)
+function randomDelay(min=45000, max=180000) {
+  return new Promise(resolve => setTimeout(resolve, Math.floor(Math.random()*(max-min)+min)));
+}
 
 // ── Filter rules ──────────────────────────────────────
 app.get('/api/rules', async (req, res) => {
@@ -215,7 +284,8 @@ app.patch('/api/rules/:id', async (req, res) => {
 });
 app.post('/api/rules', async (req, res) => {
   const { source_name, action, enabled } = req.body;
-  const { rows } = await pool.query('INSERT INTO filter_rules (source_name,action,enabled) VALUES ($1,$2,$3) RETURNING *', [source_name, action||'intercept', enabled??true]);
+  const { rows } = await pool.query('INSERT INTO filter_rules (source_name,action,enabled) VALUES ($1,$2,$3) RETURNING *',
+    [source_name, action||'intercept', enabled??true]);
   res.json(rows[0]);
 });
 app.delete('/api/rules/:id', async (req, res) => {
@@ -263,10 +333,10 @@ app.patch('/api/leads/:id', async (req, res) => {
   res.json(rows[0]);
 });
 
-// ── Process lead (shared) ─────────────────────────────
-async function processLead(leadData, res, isTest=false) {
+// ── Process lead ──────────────────────────────────────
+async function processLead(leadData, res, isTest=false, useDelay=false) {
   const { name, phone, vehicle, source, customer_message } = leadData;
-  const systemPrompt = process.env.SYSTEM_PROMPT || DEFAULT_PROMPT;
+  const systemPrompt = await getPrompt();
 
   const { rows: rules } = await pool.query('SELECT * FROM filter_rules WHERE LOWER(source_name)=LOWER($1)', [source]);
   const rule = rules[0];
@@ -274,32 +344,44 @@ async function processLead(leadData, res, isTest=false) {
 
   if (!intercept) {
     const { rows } = await pool.query(
-      `INSERT INTO leads (name,phone,vehicle,source,customer_message,status,is_test) VALUES ($1,$2,$3,$4,$5,'passed-through',$6) RETURNING *`,
+      `INSERT INTO leads (name,phone,vehicle,source,customer_message,status,is_test)
+       VALUES ($1,$2,$3,$4,$5,'passed-through',$6) RETURNING *`,
       [name,phone,vehicle,source,customer_message,isTest]
     );
     return res.json({ intercepted: false, lead: rows[0] });
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO leads (name,phone,vehicle,source,customer_message,status,conversation,is_test) VALUES ($1,$2,$3,$4,$5,'intercepted','[]',$6) RETURNING *`,
+    `INSERT INTO leads (name,phone,vehicle,source,customer_message,status,conversation,is_test)
+     VALUES ($1,$2,$3,$4,$5,'intercepted','[]',$6) RETURNING *`,
     [name,phone,vehicle,source,customer_message,isTest]
   );
   const lead = rows[0];
-  const conversation = [{ role:'user', content:`New inbound lead:\nCustomer: ${name}\nVehicle: ${vehicle}\nSource: ${source}\nMessage: "${customer_message||'none'}"\n\nSend your first SMS.` }];
+
+  const conversation = [{
+    role: 'user',
+    content: `New inbound lead:\nCustomer name: ${name}\nVehicle of interest: ${vehicle}\nLead source: ${source}\nCustomer message: "${customer_message||'none'}"\n\nSend your first text message to this customer.`
+  }];
 
   try {
+    // Apply humanized delay for real leads only
+    if (useDelay) await randomDelay();
+
     const aiReply = await callClaude(systemPrompt, conversation);
-    conversation.push({ role:'assistant', content:aiReply });
-    await pool.query(`UPDATE leads SET conversation=$1,status='ai-engaged' WHERE id=$2`, [JSON.stringify(conversation), lead.id]);
-    res.json({ intercepted:true, lead:{...lead,conversation}, ai_reply:aiReply });
+    conversation.push({ role: 'assistant', content: aiReply });
+    await pool.query(`UPDATE leads SET conversation=$1,status='ai-engaged' WHERE id=$2`,
+      [JSON.stringify(conversation), lead.id]);
+    res.json({ intercepted: true, lead: { ...lead, conversation }, ai_reply: aiReply });
   } catch(err) {
     await pool.query(`UPDATE leads SET status='error' WHERE id=$1`, [lead.id]);
     res.status(500).json({ error: err.message });
   }
 }
 
-app.post('/api/leads/simulate', async (req, res) => processLead(req.body, res, true));
+// Simulator — no delay, marked as test
+app.post('/api/leads/simulate', async (req, res) => processLead(req.body, res, true, false));
 
+// Webhook — real leads get humanized delay
 app.post('/webhook/lead', async (req, res) => {
   if (!req.is('application/json')) return res.status(200).send('OK');
   const b = req.body;
@@ -309,41 +391,45 @@ app.post('/webhook/lead', async (req, res) => {
     vehicle: b.vehicle?.year ? `${b.vehicle.year} ${b.vehicle.make} ${b.vehicle.model}` : b.vehicle || 'Unknown',
     source: b.lead_source || b.source || 'Webhook',
     customer_message: b.comments || b.message || ''
-  }, res, false);
+  }, res, false, true);
 });
 
+// ── Customer reply ────────────────────────────────────
 app.post('/api/leads/:id/reply', async (req, res) => {
-  const { message } = req.body;
-  const systemPrompt = process.env.SYSTEM_PROMPT || DEFAULT_PROMPT;
+  const { message, use_delay } = req.body;
+  const systemPrompt = await getPrompt();
   const { rows } = await pool.query('SELECT * FROM leads WHERE id=$1', [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Not found' });
 
   const lead = rows[0];
   const conv = Array.isArray(lead.conversation) ? lead.conversation : JSON.parse(lead.conversation||'[]');
-  conv.push({ role:'user', content:message });
+  conv.push({ role: 'user', content: message });
 
   const customerReplies = conv.filter(m => m.role==='user' && !m.content.startsWith('New inbound lead'));
   const isFirst = customerReplies.length === 1;
 
   try {
+    if (use_delay) await randomDelay();
     const aiReply = await callClaude(systemPrompt, conv);
-    conv.push({ role:'assistant', content:aiReply });
+    conv.push({ role: 'assistant', content: aiReply });
     const { rows: updated } = await pool.query(
       `UPDATE leads SET conversation=$1,status=$2,contacted_at=$3 WHERE id=$4 RETURNING *`,
       [JSON.stringify(conv), isFirst?'contacted':lead.status, isFirst?new Date().toISOString():lead.contacted_at, lead.id]
     );
-    res.json({ lead:updated[0], ai_reply:aiReply, two_way_contact:isFirst });
+    res.json({ lead: updated[0], ai_reply: aiReply, two_way_contact: isFirst });
   } catch(err) {
-    res.status(500).json({ error:err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
+// ── Push to CRM ───────────────────────────────────────
 app.post('/api/leads/:id/push-crm', async (req, res) => {
   const { rows } = await pool.query(
     `UPDATE leads SET status='pushed-to-crm',pushed_to_crm_at=$1 WHERE id=$2 RETURNING *`,
     [new Date().toISOString(), req.params.id]
   );
-  res.json({ ok:true, lead:rows[0] });
+  // TODO: Tekion APC API call goes here when credentials are available
+  res.json({ ok: true, lead: rows[0] });
 });
 
 // ── Stats ─────────────────────────────────────────────
@@ -383,10 +469,16 @@ app.get('/api/reports', async (req, res) => {
       SELECT status, COUNT(*) AS count FROM leads
       WHERE created_at>=$1 AND is_test=false GROUP BY status ORDER BY count DESC`, [since])
   ]);
-  res.json({ by_source:src.rows, daily:daily.rows, by_status:status.rows, period_days:days });
+  res.json({ by_source: src.rows, daily: daily.rows, by_status: status.rows, period_days: days });
 });
 
+// ── Routes ────────────────────────────────────────────
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'marketing.html')));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
+// ── Start ─────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-initDB().then(() => app.listen(PORT, () => console.log(`Lead Intercept v3 on port ${PORT}`))).catch(err => { console.error(err); process.exit(1); });
+initDB()
+  .then(() => app.listen(PORT, () => console.log(`Prelude AI on port ${PORT}`)))
+  .catch(err => { console.error('DB init failed:', err); process.exit(1); });
